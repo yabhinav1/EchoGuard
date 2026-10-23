@@ -67,3 +67,13 @@ test('identical same-day CSV rows get distinct, stable ids', () => {
   assert.equal(new Set(first.map((t) => t.id)).size, 2);
   assert.deepEqual(parseCsv(csv).map((t) => t.id), first.map((t) => t.id), 're-importing the same file must not duplicate');
 });
+
+test('bank sync skips transfers and card payments', async () => {
+  const { isSpending } = await import('../src/services/plaid.js');
+  const t = (primary, amount = 25, pending = false) => ({ amount, pending, personal_finance_category: { primary } });
+  assert.equal(isSpending(t('FOOD_AND_DRINK')), true);
+  assert.equal(isSpending(t('LOAN_PAYMENTS')), false, 'credit card payment');
+  assert.equal(isSpending(t('TRANSFER_OUT')), false);
+  assert.equal(isSpending(t('FOOD_AND_DRINK', -25)), false, 'refund');
+  assert.equal(isSpending(t('FOOD_AND_DRINK', 25, true)), false, 'pending');
+});

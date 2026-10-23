@@ -57,6 +57,10 @@ const PFC_MAP = {
   FOOD_AND_DRINK: 'Dining', GENERAL_MERCHANDISE: 'Shopping', TRANSPORTATION: 'Transport', ENTERTAINMENT: 'Entertainment',
   MEDICAL: 'Health', PERSONAL_CARE: 'Health', RENT_AND_UTILITIES: 'Utilities', TRAVEL: 'Travel', GENERAL_SERVICES: 'Software',
 };
+// Money moving between the user's own accounts (card payments, loan payments, transfers) is not spending;
+// counting a credit card payment would double-count the purchases already made on that card.
+const NOT_SPENDING = new Set(['TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS', 'INCOME']);
+export const isSpending = (t) => t.amount > 0 && !t.pending && !NOT_SPENDING.has(t.personal_finance_category?.primary);
 
 export async function createLinkToken(userId) {
   const res = await call('/link/token/create', {
@@ -90,7 +94,7 @@ export async function syncTransactions(userId) {
     let hasMore = true;
     while (hasMore) {
       const res = await call('/transactions/sync', { access_token: accessToken, cursor: item.cursor || undefined, count: 500 });
-      const txs = [...res.added, ...res.modified].filter((t) => t.amount > 0 && !t.pending).map((t) => ({
+      const txs = [...res.added, ...res.modified].filter(isSpending).map((t) => ({
         id: `plaid_${t.transaction_id}`,
         date: new Date(`${t.date}T12:00:00Z`).toISOString(),
         merchant: t.merchant_name || t.name,
