@@ -6,6 +6,15 @@ cd "$(dirname "$0")"
 STACK=${STACK:-echoguard}
 REGION=${AWS_REGION:-us-east-1}
 
+# Optional local settings (git-ignored), e.g. ALERT_EMAIL, ALEXA_SKILL_ID, PLAID_* keys.
+# Variables already set in the environment win over the file.
+if [ -f .env.deploy ]; then
+  while IFS='=' read -r key value; do
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    [ -z "${!key:-}" ] && export "$key=$value"
+  done < .env.deploy
+fi
+
 # SAM rejects empty "Key=" overrides, so optional settings are only passed when set (blank ones use the template default)
 PARAMS=(
   EnableAuth="${ENABLE_AUTH:-true}" PlaidEnv="${PLAID_ENV:-sandbox}"
