@@ -4,12 +4,12 @@ import { Icon } from './Icon';
 import { canListen, canSpeak, listen, speak, stopSpeaking } from '../speech';
 
 const SAMPLES = [
-  'Alexa, ask Echo Guard what renews this week',
-  'Ask Echo Guard what can I cancel',
-  'Ask Echo Guard anything unusual',
-  'Ask Echo Guard how is my dining budget',
-  'Ask Echo Guard how much will I spend this month',
-  'Ask Echo Guard what are my subscriptions',
+  'Alexa, ask Money Guard what renews this week',
+  'Ask Money Guard what can I cancel',
+  'Ask Money Guard anything unusual',
+  'Ask Money Guard how is my dining budget',
+  'Ask Money Guard how much will I spend this month',
+  'Ask Money Guard what are my subscriptions',
 ];
 
 /** Try the Alexa skill in the browser: voice or text in, the skill's real response read out loud. */
@@ -74,7 +74,7 @@ export default function AlexaSimulator() {
               <Icon name="mic" size={20} />
             </button>
           )}
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder='Try "Alexa, ask Echo Guard what renews this week"' aria-label="What to say to Alexa" />
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder='Try "Alexa, ask Money Guard what renews this week"' aria-label="What to say to Alexa" />
           <button type="submit" className="primary" disabled={!text.trim() || state === 'thinking'}>Ask</button>
           {canSpeak() && (
             <button type="button" className="icon-btn" onClick={() => { setVoiceOut((v) => !v); stopSpeaking(); }} aria-label={voiceOut ? 'Mute spoken replies' : 'Read replies aloud'} title={voiceOut ? 'Mute' : 'Unmute'}>
@@ -82,7 +82,7 @@ export default function AlexaSimulator() {
             </button>
           )}
         </form>
-        <div className="chips center">{SAMPLES.map((s) => <button key={s} onClick={() => ask(s)} disabled={state === 'thinking'}>{s.replace(/^(Alexa, )?ask Echo Guard /i, '')}</button>)}</div>
+        <div className="chips center">{SAMPLES.map((s) => <button key={s} onClick={() => ask(s)} disabled={state === 'thinking'}>{s.replace(/^(Alexa, )?ask Money Guard /i, '')}</button>)}</div>
       </div>
 
       <div className="span-5 stack-col">
@@ -110,7 +110,7 @@ export default function AlexaSimulator() {
             <li>Deploy the stack and copy the <code>AlexaFunctionArn</code> output.</li>
             <li>Create a custom skill in the Alexa Developer Console and paste <code>backend/alexa/interaction-model.json</code>.</li>
             <li>Point the skill endpoint at the Lambda ARN, then re-deploy with <code>ALEXA_SKILL_ID</code>.</li>
-            <li>Say "Alexa, open Echo Guard". The simulator here runs the exact same handler.</li>
+            <li>Say "Alexa, open Money Guard". The simulator here runs the exact same handler.</li>
           </ol>
         </div>
       </div>

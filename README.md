@@ -23,7 +23,7 @@ Things to try:
 
 - **Search bar:** "What can I cancel?", "How much is Netflix?", "How do I cancel Hulu?", "How much will I spend this month?"
 - **Subscriptions → Cancel** on any service: steps, a direct link, and a ready-to-send cancellation request
-- **Alexa skill** page: click the mic and say *"Alexa, ask Echo Guard what renews this week"* (Chrome or Edge)
+- **Alexa skill** page: click the mic and say *"Alexa, ask Money Guard what renews this week"* (Chrome or Edge)
 - **Unusual activity:** mark the DoorDash double charge as "Not a duplicate" and watch the alert count drop
 - **Renewal calendar:** every upcoming charge on a month grid
 
@@ -47,7 +47,7 @@ The demo data rolls forward with the calendar, so renewals are always upcoming a
 | **Renewal calendar** | Month grid of every projected charge |
 | Natural language Q&A | Built-in assistant over your own data; optionally Claude on Amazon Bedrock |
 | **Voice** | Speak questions and hear answers (browser Web Speech API) |
-| **Alexa skill + in-browser simulator** | "Alexa, ask Echo Guard what renews this week"; the simulator runs the exact skill handler |
+| **Alexa skill + in-browser simulator** | "Alexa, ask Money Guard what renews this week"; the simulator runs the exact skill handler |
 | Budget guardrails | Per-category monthly budgets with 80% warning, over-budget and pace-to-exceed alerts |
 | Renewal reminders | Daily EventBridge job publishes per-user alerts to SNS 3 days before renewals |
 | Weekly digest | Summary of costs, renewals, alerts and the best savings tip |

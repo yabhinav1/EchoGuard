@@ -77,8 +77,9 @@ test('user feedback flows through the analysis', async () => {
 });
 
 test('Alexa simulator maps utterances to the skill intents', () => {
-  assert.equal(matchUtterance('Alexa, ask Echo Guard what renews this week').intent, 'RenewalsIntent');
-  assert.equal(matchUtterance('open echo guard').type, 'LaunchRequest');
+  assert.equal(matchUtterance('Alexa, ask Money Guard what renews this week').intent, 'RenewalsIntent');
+  assert.equal(matchUtterance('ask echo guard anything unusual').intent, 'AnomaliesIntent');
+  assert.equal(matchUtterance('open money guard').type, 'LaunchRequest');
   assert.deepEqual(matchUtterance('how is my dining budget').slots, { category: 'dining' });
   assert.equal(matchUtterance('forecast my spending').intent, 'ForecastIntent');
   const free = matchUtterance('how much did I spend on dining');

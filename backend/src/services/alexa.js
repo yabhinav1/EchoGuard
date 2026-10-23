@@ -105,9 +105,9 @@ const norm = (t) => t.toLowerCase().replace(/[^a-z0-9{} ]/g, ' ').replace(/\s+/g
 const words = (t) => new Set(norm(t).split(' ').filter(Boolean));
 
 export function matchUtterance(utterance) {
-  // "Alexa, ask Echo Guard to ..." -> "..."
+  // "Alexa, ask Money Guard to ..." -> "..." (the old "Echo Guard" name is still understood)
   const u = norm(utterance).replace(/^alexa /, "")
-    .replace(/^(ask|tell|open|launch|start) echo ?guard\b/, "").replace(/^ (to|about|for)\b/, "").trim();
+    .replace(/^(ask|tell|open|launch|start) (echo ?|money )guard\b/, "").replace(/^ (to|about|for)\b/, "").trim();
   if (!u) return { type: 'LaunchRequest' };
   if (/^(help|what can you do|what can i say)$/.test(u)) return { type: 'IntentRequest', intent: 'AMAZON.HelpIntent', slots: {} };
   if (/^(stop|cancel|never mind|goodbye|bye)$/.test(u)) return { type: 'IntentRequest', intent: 'AMAZON.StopIntent', slots: {} };
