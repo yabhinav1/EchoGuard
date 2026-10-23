@@ -85,6 +85,12 @@ export default function App() {
       notify(r.remindersSent ? `Sent ${r.remindersSent} reminder${r.remindersSent > 1 ? 's' : ''}${features?.sns ? '' : ' (logged to the API console in demo mode)'}` : 'Nothing due in the next 3 days');
     } catch (e) { notify(`Error: ${e.message}`); } finally { setBusy(false); }
   };
+  const onResetDemo = async () => {
+    if (!window.confirm('Reset your demo? Your linked banks, imports, marks and budget changes in this browser are cleared.')) return;
+    setBusy(true);
+    try { await api.resetDemo(); setDigest(null); await load(); notify('Your demo is back to the original data'); }
+    catch (e) { notify(`Error: ${e.message}`); } finally { setBusy(false); }
+  };
   const onDigest = async () => {
     setBusy(true);
     try { setDigest((await api.digest()).text); navigate('dashboard'); } catch (e) { notify(`Error: ${e.message}`); } finally { setBusy(false); }
@@ -164,8 +170,13 @@ export default function App() {
         <div className="page-head">
           <div>
             <h1>{title}</h1>
-            <div className="dim">{data ? `${data.transactionCount} transactions analyzed · ${live ? 'live' : 'demo'} data` : 'Loading your data...'}</div>
+            <div className="dim">{data ? `${data.transactionCount} transactions analyzed · ${user ? 'your account' : 'your private copy of the demo: changes only show in this browser'}` : 'Loading your data...'}</div>
           </div>
+          {!user && data && (
+            <button className="sm" onClick={onResetDemo} disabled={busy} title="Undo everything you changed in this browser">
+              <Icon name="undo" size={14} />Reset my demo
+            </button>
+          )}
         </div>
 
         {!data ? (
@@ -238,7 +249,7 @@ export default function App() {
                   <ul className="help-list">
                     <li><Icon name="receipt" size={18} /><div><b>Receipts</b><span>Photos go through Amazon Textract; Bedrock picks the category.</span></div></li>
                     <li><Icon name="file" size={18} /><div><b>CSV exports</b><span>Any bank or card export with date, description and amount columns.</span></div></li>
-                    <li><Icon name="bank" size={18} /><div><b>Bank sync</b><span>Plaid Link with incremental sync; access tokens are encrypted with KMS.</span></div></li>
+                    <li><Icon name="bank" size={18} /><div><b>Bank sync</b><span>Plaid Link with incremental sync; banks you link stay private to your browser.</span></div></li>
                   </ul>
                 </div>
               </div>

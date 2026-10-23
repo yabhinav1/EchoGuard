@@ -3,18 +3,21 @@
  * and returns { status, body }. Wrapped by local-server.js (Express) and lambda.js (API Gateway).
  */
 import { analyzeUser } from '../services/analysis.js';
-import { listTransactions, putTransactions, deleteTransaction, isDemoMode } from '../services/db.js';
+import { listTransactions, putTransactions, deleteTransaction, isDemoMode, usesDemoData, deleteUserData } from '../services/db.js';
 import { chat, weeklyDigest } from '../services/ai.js';
 import { sendAlert } from '../services/notify.js';
 import { getBudgets, setBudgets, budgetStatus, budgetAlerts } from '../services/budgets.js';
 import { scanReceipt } from '../services/receipts.js';
 import { parseCsv } from '../services/importers.js';
-import { plaidEnabled, createLinkToken, exchangePublicToken, syncTransactions } from '../services/plaid.js';
+import { plaidEnabled, createLinkToken, exchangePublicToken, syncTransactions, plaidStatus, removeItem } from '../services/plaid.js';
 import { handleAlexaRequest, simulateUtterance } from '../services/alexa.js';
 import { cancelGuide } from '../services/cancelGuide.js';
 import { setSubscriptionStatus, dismissAnomaly, restoreAnomalies, SUBSCRIPTION_STATUSES } from '../services/prefs.js';
 
 const ok = (body) => ({ status: 200, body });
+
+/** X-User-Id (used when sign-in is off): browsers send a random "guest-..." id; anything malformed falls back to demo. */
+export const userIdFromHeader = (value) => (/^[A-Za-z0-9_-]{1,80}$/.test(value || '') ? value : 'demo');
 const bad = (msg) => ({ status: 400, body: { error: msg } });
 
 export const routes = {
@@ -134,12 +137,23 @@ export const routes = {
   'POST /plaid/exchange': async ({ userId, body }) => {
     if (!plaidEnabled()) return { status: 501, body: { error: 'Plaid is not configured.' } };
     if (!body?.publicToken) return bad('publicToken is required');
-    await exchangePublicToken(userId, body.publicToken);
+    await exchangePublicToken(userId, body.publicToken, body.institution);
     return ok(await syncTransactions(userId));
   },
+  'GET /plaid/status': async ({ userId }) => ok(await plaidStatus(userId)),
+  'DELETE /plaid/items/:itemId': async ({ userId, params }) => ok(await removeItem(userId, params.itemId)),
   'POST /plaid/sync': async ({ userId }) => {
     if (!plaidEnabled()) return { status: 501, body: { error: 'Plaid is not configured.' } };
     return ok(await syncTransactions(userId));
+  },
+
+  // ---- Demo: each browser gets a private copy; this puts it back to the original demo data ----
+  'POST /demo/reset': async ({ userId }) => {
+    if (!usesDemoData(userId)) return bad('Only demo accounts can be reset');
+    const { items } = await plaidStatus(userId);
+    for (const i of items) await removeItem(userId, i.itemId).catch(() => {});
+    await deleteUserData(userId);
+    return ok({ reset: true });
   },
 
   // ---- Alexa (also exposed as its own Lambda) ----

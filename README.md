@@ -27,7 +27,7 @@ Things to try:
 - **Unusual activity:** mark the DoorDash double charge as "Not a duplicate" and watch the alert count drop
 - **Renewal calendar:** every upcoming charge on a month grid
 
-The demo data rolls forward with the calendar, so renewals are always upcoming and "this week" alerts are always this week.
+Every visitor gets a **private copy** of the demo: bank links, imports, marks and dismissed alerts only show in their own browser, and **Reset my demo** puts it back. The demo data also rolls forward with the calendar, so renewals are always upcoming and "this week" alerts are always this week.
 
 ## What it does
 
@@ -122,7 +122,7 @@ docs/ARCHITECTURE.md           architecture and data model
 
 ## API
 
-All routes take an `X-User-Id` header (defaults to `demo`); with Cognito in front, the JWT `sub` claim is used instead.
+Without sign-in, routes take an `X-User-Id` header: the web app sends a random per-browser `guest-...` id (missing or malformed ids fall back to the shared `demo` user). With Cognito in front, the JWT `sub` claim is used instead.
 
 ```
 GET  /health
@@ -142,6 +142,9 @@ GET  /digest
 POST /reminders/run                   trigger the reminder job now
 GET  /budgets   PUT /budgets          { Dining: 600, ... }
 POST /plaid/link-token | /plaid/exchange | /plaid/sync
+GET  /plaid/status                    linked banks (no tokens)
+DELETE /plaid/items/:itemId           disconnect a bank and remove its transactions
+POST /demo/reset                      put a demo/guest account back to the original demo data
 POST /alexa                           raw Alexa request JSON
 POST /alexa/simulate                  { utterance } -> intent + the skill's spoken response
 ```

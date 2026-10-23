@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { api, money } from '../api';
 import { Icon } from './Icon';
+import BankLink from './BankLink';
 
 const SAMPLE_RECEIPT = `Blue Bottle Coffee
 10/23/2026
@@ -23,17 +24,6 @@ function sampleCsv() {
     `${d(2)},STARBUCKS #1234,-6.45`,
     `${d(3)},WHOLE FOODS MARKET,-84.20`,
   ].join('\n');
-}
-
-function loadPlaidScript() {
-  return new Promise((resolve, reject) => {
-    if (window.Plaid) return resolve(window.Plaid);
-    const s = document.createElement('script');
-    s.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
-    s.onload = () => resolve(window.Plaid);
-    s.onerror = () => reject(new Error('Could not load Plaid Link'));
-    document.head.appendChild(s);
-  });
 }
 
 export default function Import({ features, onImported, notify }) {
@@ -87,22 +77,6 @@ export default function Import({ features, onImported, notify }) {
     if (f) f.text().then(setCsv);
   };
 
-  const linkBank = async () => {
-    setBusy(true);
-    try {
-      const { linkToken } = await api.plaidLinkToken();
-      const Plaid = await loadPlaidScript();
-      Plaid.create({
-        token: linkToken,
-        onSuccess: async (publicToken) => {
-          try { const r = await api.plaidExchange(publicToken); notify(`Linked. Imported ${r.imported} transactions`); onImported(); }
-          catch (e) { notify(e.message); }
-        },
-        onExit: () => setBusy(false),
-      }).open();
-    } catch (e) { notify(e.message); setBusy(false); }
-  };
-
   return (
     <div className="card">
       <h2>Add transactions</h2>
@@ -147,19 +121,7 @@ export default function Import({ features, onImported, notify }) {
         </div>
       )}
 
-      {tab === 'bank' && (
-        <div className="stack">
-          {features?.plaid
-            ? <>
-                <div className="dim">Connect a bank through Plaid. In sandbox, use user_good / pass_good.</div>
-                <div className="actions"><button className="primary" onClick={linkBank} disabled={busy}>Link bank account</button><button onClick={() => api.plaidSync().then((r) => { notify(`Synced ${r.imported} new`); onImported(); }).catch((e) => notify(e.message))} disabled={busy}>Sync now</button></div>
-              </>
-            : <>
-                <div className="dim">Bank sync isn't switched on in this demo. When it is, you pick your bank, sign in on Plaid's secure page, and EchoGuard imports new transactions automatically.</div>
-                <div className="actions"><button className="primary" onClick={() => setTab('csv')}><Icon name="file" size={14} />Try a CSV import instead</button></div>
-              </>}
-        </div>
-      )}
+      {tab === 'bank' && <BankLink enabled={!!features?.plaid} notify={notify} onImported={onImported} onUseCsv={() => setTab('csv')} />}
     </div>
   );
 }

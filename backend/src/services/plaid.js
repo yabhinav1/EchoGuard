@@ -2,7 +2,7 @@
  * Plaid bank sync via REST (no SDK). Enabled when PLAID_CLIENT_ID and PLAID_SECRET are set.
  * Uses the sandbox environment unless PLAID_ENV=development|production.
  */
-import { getMeta, putMeta, putTransactions } from './db.js';
+import { getMeta, putMeta, putTransactions, listTransactions, deleteTransaction } from './db.js';
 import { categorizeByRules } from './categorize.js';
 
 const ENV = process.env.PLAID_ENV || 'sandbox';
@@ -73,10 +73,14 @@ export async function createLinkToken(userId) {
   return { linkToken: res.link_token, expiration: res.expiration };
 }
 
-export async function exchangePublicToken(userId, publicToken) {
+/** institution: { id, name } from Plaid Link's onSuccess metadata, shown back to the user. */
+export async function exchangePublicToken(userId, publicToken, institution = null) {
   const res = await call('/item/public_token/exchange', { public_token: publicToken });
   const items = await getMeta(userId, 'plaidItems', []);
-  items.push({ itemId: res.item_id, ...(await sealToken(userId, res.item_id, res.access_token)), cursor: null, linkedAt: new Date().toISOString() });
+  items.push({
+    itemId: res.item_id, ...(await sealToken(userId, res.item_id, res.access_token)), cursor: null,
+    institution: institution?.name ? String(institution.name).slice(0, 80) : 'Linked bank', linkedAt: new Date().toISOString(),
+  });
   await putMeta(userId, 'plaidItems', items);
   return { itemId: res.item_id };
 }
@@ -101,12 +105,33 @@ export async function syncTransactions(userId) {
         amount: +t.amount.toFixed(2),
         category: PFC_MAP[t.personal_finance_category?.primary] || categorizeByRules(t.merchant_name || t.name),
         source: 'plaid',
+        plaidItemId: item.itemId,
       }));
       if (txs.length) added += await putTransactions(userId, txs);
       item.cursor = res.next_cursor;
       hasMore = res.has_more;
     }
+    item.lastSync = new Date().toISOString();
   }
   await putMeta(userId, 'plaidItems', items);
   return { linkedAccounts: items.length, imported: added };
+}
+
+/** Linked banks for the Link bank tab (no tokens). */
+export async function plaidStatus(userId) {
+  const items = await getMeta(userId, 'plaidItems', []);
+  return { enabled: plaidEnabled(), items: items.map(({ itemId, institution, linkedAt, lastSync }) => ({ itemId, institution: institution || 'Linked bank', linkedAt, lastSync })) };
+}
+
+/** Unlinks a bank: revokes it at Plaid and removes the transactions it imported. */
+export async function removeItem(userId, itemId) {
+  const items = await getMeta(userId, 'plaidItems', []);
+  const item = items.find((i) => i.itemId === itemId);
+  if (!item) throw Object.assign(new Error('That bank is not linked'), { status: 404 });
+  try { await call('/item/remove', { access_token: await openToken(userId, item) }); }
+  catch (err) { console.warn('[plaid] item/remove failed, unlinking locally:', err.message); }
+  const txs = (await listTransactions(userId)).filter((t) => t.plaidItemId === itemId);
+  for (const t of txs) await deleteTransaction(userId, t.id);
+  await putMeta(userId, 'plaidItems', items.filter((i) => i.itemId !== itemId));
+  return { removed: itemId, transactionsRemoved: txs.length };
 }

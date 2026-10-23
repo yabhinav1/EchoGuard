@@ -106,3 +106,9 @@ button.sm { padding: 5px 10px; font-size: 12px; }
 .icon-btn.ghost.on { color: var(--primary); background: var(--primary-light); }
 .mic-sm { flex-shrink: 0; }
 .mic-sm.on { background: var(--critical); color: #fff; border-color: transparent; animation: pulse 1.2s ease-in-out infinite; }
+
+/* ---- Linked banks ---------------------------------------------------------------------- */
+.bank-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bank-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--grid); border-radius: 10px; }
+.bank-icon { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: var(--primary-light); color: var(--primary-dark); flex-shrink: 0; }
+.bank-main { flex: 1; min-width: 0; }

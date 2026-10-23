@@ -3,7 +3,7 @@
  *  - apiHandler: API Gateway HTTP API (payload v2) -> routes in api.js
  *  - reminderHandler: EventBridge scheduled job -> runReminders
  */
-import { routes, runReminders } from './api.js';
+import { routes, runReminders, userIdFromHeader } from './api.js';
 import { handleAlexaRequest } from '../services/alexa.js';
 import { ensureAlertSubscription } from '../services/notify.js';
 import { listUsersWithMeta } from '../services/db.js';
@@ -42,7 +42,7 @@ export async function apiHandler(event) {
 
   // User identity: Cognito JWT claim if present, else X-User-Id header, else demo
   const claims = event.requestContext?.authorizer?.jwt?.claims;
-  const userId = claims?.sub || event.headers?.['x-user-id'] || 'demo';
+  const userId = claims?.sub || userIdFromHeader(event.headers?.['x-user-id']);
   if (claims?.sub && claims.email) {
     await ensureAlertSubscription(userId, claims.email).catch((err) => console.warn('[alerts] subscribe failed:', err.message));
   }

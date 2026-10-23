@@ -136,7 +136,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   background: var(--bg); border-radius: var(--radius) var(--radius) 0 0; padding: 20px; transition: margin-left 0.22s ease;
 }
 .nav-closed .content { margin-left: 20px; }
-.page-head { margin-bottom: 20px; padding: 16px 20px; background: var(--surface); border-radius: var(--radius); }
+.page-head { margin-bottom: 20px; padding: 16px 20px; background: var(--surface); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .page-head h1 { font-size: 18px; font-weight: 600; }
 .page { display: flex; flex-direction: column; gap: 20px; }
 .row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px; align-items: start; }

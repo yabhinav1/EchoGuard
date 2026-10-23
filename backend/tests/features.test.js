@@ -93,3 +93,24 @@ test('built-in assistant answers service-specific questions', () => {
   assert.match(ruleBasedAnswer('how much will I spend this month', ctx), /next 30 days/);
   assert.match(ruleBasedAnswer('how much did I spend on dining', ctx), /\$790\.00 on Dining/);
 });
+
+test('each guest gets a private copy of the demo', async () => {
+  const { listTransactions, putTransactions, usesDemoData } = await import('../src/services/db.js');
+  const { analyzeUser } = await import('../src/services/analysis.js');
+  const { routes, userIdFromHeader } = await import('../src/handlers/api.js');
+  const a = 'guest-aaaaaaaa-1111', b = 'guest-bbbbbbbb-2222';
+  assert.ok(usesDemoData(a) && usesDemoData('demo') && !usesDemoData('some-cognito-sub'));
+  const base = (await listTransactions(a, { now: NOW })).length;
+  assert.equal(base, txs.length, 'a new guest starts with the full demo history');
+  await putTransactions(a, [{ id: 'mine-1', date: NOW.toISOString(), merchant: 'Corner Cafe', amount: 4.5, category: 'Dining' }]);
+  assert.equal((await listTransactions(a, { now: NOW })).length, base + 1);
+  assert.equal((await listTransactions(b, { now: NOW })).length, base, 'other guests never see it');
+  const netflix = (await analyzeUser(a, { now: NOW })).subscriptions.find((s) => s.merchant === 'Netflix');
+  await setSubscriptionStatus(a, netflix.id, 'cancelled');
+  assert.equal((await analyzeUser(b, { now: NOW })).subscriptions.find((s) => s.id === netflix.id).status, 'active');
+  await routes['POST /demo/reset']({ userId: a });
+  assert.equal((await listTransactions(a, { now: NOW })).length, base, 'reset restores the original demo');
+  assert.equal((await routes['POST /demo/reset']({ userId: 'some-cognito-sub' })).status, 400);
+  assert.equal(userIdFromHeader('guest-ok_1'), 'guest-ok_1');
+  assert.equal(userIdFromHeader('../etc'), 'demo');
+});

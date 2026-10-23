@@ -34,9 +34,7 @@ API=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION
 BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
 SITE=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='FrontendUrl'].OutputValue" --output text)
 
-echo "Seeding demo data into DynamoDB..."
-(cd ../backend && TABLE_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='TableName'].OutputValue" --output text) \
-  AWS_REGION=$REGION node scripts/seed-dynamo.js)
+# No seeding step: demo and guest users get the demo history generated in the Lambda (see db.js).
 
 out() { aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
 COGNITO_DOMAIN=$(out CognitoDomain); COGNITO_CLIENT=$(out CognitoClientId); ALEXA_ARN=$(out AlexaFunctionArn)

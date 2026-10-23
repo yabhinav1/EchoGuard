@@ -50,6 +50,8 @@
 
 `demoData.js` generates the same synthetic history every time, anchored to a fixed date so tests are deterministic. Seeded transactions are shifted forward by the days elapsed since that anchor whenever they are read, so a deployed demo never goes stale. Transactions users add are never shifted.
 
+The history is never written to DynamoDB. The shared `demo` user and every per-browser `guest-<uuid>` user read it from the Lambda's memory, merged with whatever that user stored themselves. So each visitor gets a private, resettable copy (`POST /demo/reset` deletes only their own items) at no storage or write cost.
+
 ## Alexa
 
 The skill's interaction model lives in `backend/alexa/`. The Alexa Lambda and the in-browser simulator (`POST /alexa/simulate`) call the same handler; the simulator maps an utterance to an intent using the model's own sample utterances, falling back to the free-form `AskIntent`.

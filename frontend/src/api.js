@@ -2,10 +2,24 @@ import { currentUser } from './auth';
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
+// Without sign-in, each browser gets its own private copy of the demo, keyed by a random guest id.
+const GUEST_KEY = 'echoguard.guestId';
+let memoryGuest = null;
+const newGuest = () => `guest-${crypto.randomUUID()}`;
+export function guestId() {
+  try {
+    let id = localStorage.getItem(GUEST_KEY);
+    if (!id) { id = newGuest(); localStorage.setItem(GUEST_KEY, id); }
+    return id;
+  } catch {
+    return (memoryGuest ||= newGuest()); // storage blocked: private for this page load
+  }
+}
+
 async function request(path, opts = {}) {
   const user = currentUser();
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-  if (user) headers.Authorization = `Bearer ${user.idToken}`; else headers['X-User-Id'] = 'demo';
+  if (user) headers.Authorization = `Bearer ${user.idToken}`; else headers['X-User-Id'] = guestId();
   const res = await fetch(`${BASE}${path}`, { ...opts, headers });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
   return res.json();
@@ -23,7 +37,10 @@ export const api = {
   scanReceipt: (payload) => request('/receipts', { method: 'POST', body: JSON.stringify(payload) }),
   importCsv: (csv) => request('/transactions/import', { method: 'POST', body: JSON.stringify({ csv }) }),
   plaidLinkToken: () => request('/plaid/link-token', { method: 'POST' }),
-  plaidExchange: (publicToken) => request('/plaid/exchange', { method: 'POST', body: JSON.stringify({ publicToken }) }),
+  plaidExchange: (publicToken, institution) => request('/plaid/exchange', { method: 'POST', body: JSON.stringify({ publicToken, institution }) }),
+  plaidStatus: () => request('/plaid/status'),
+  plaidUnlink: (itemId) => request(`/plaid/items/${encodeURIComponent(itemId)}`, { method: 'DELETE' }),
+  resetDemo: () => request('/demo/reset', { method: 'POST' }),
   plaidSync: () => request('/plaid/sync', { method: 'POST' }),
   cancelGuide: (id) => request(`/subscriptions/${encodeURIComponent(id)}/cancel-guide`),
   setSubscriptionStatus: (id, status) => request(`/subscriptions/${encodeURIComponent(id)}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),

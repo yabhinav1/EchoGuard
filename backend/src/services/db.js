@@ -1,7 +1,10 @@
 /**
- * Transaction store. Uses DynamoDB when TABLE_NAME is set, otherwise an in-memory store seeded
- * from src/data/transactions.json, or freshly generated demo data when that file is absent.
- * Seeded demo transactions are shifted to "today" on every read (see demoData.js).
+ * Transaction store. Uses DynamoDB when TABLE_NAME is set, otherwise an in-memory store.
+ *
+ * Demo users ("demo" and per-browser "guest-<id>" users) see the shared demo history plus whatever they
+ * added themselves. The demo history is never copied per user: it is generated in memory (or read from
+ * src/data/transactions.json when present) and merged in on every read, so each visitor gets a private
+ * copy for free. Seeded demo transactions are shifted to "today" on every read (see demoData.js).
  *
  * DynamoDB layout (single table):
  *   PK = USER#<userId>   SK = TX#<date>#<id>
@@ -23,23 +26,32 @@ async function client() {
   return ddb;
 }
 
-// ---- in-memory demo store ------------------------------------------------
-const memory = new Map(); // userId -> tx[]
-function loadSeed() {
-  const file = join(__dirname, '../data/transactions.json');
-  const txs = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : generateSeed();
-  for (const tx of txs) {
-    if (!memory.has(tx.userId)) memory.set(tx.userId, []);
-    memory.get(tx.userId).push(tx);
+// ---- demo history shared by demo and guest users -----------------------------
+const DEMO_USER = /^(demo|guest-[a-z0-9-]{8,64})$/;
+/** True for the shared "demo" user and per-browser guest users, who start from the demo history. */
+export const usesDemoData = (userId) => DEMO_USER.test(userId);
+
+let seedCache = null;
+function demoHistory() {
+  if (!seedCache) {
+    const file = join(__dirname, '../data/transactions.json');
+    seedCache = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : generateSeed();
   }
+  return seedCache;
 }
-if (!TABLE) loadSeed();
+
+// ---- in-memory store (local demo mode) ------------------------------------------
+const memory = new Map(); // userId -> tx[] (only what users add; the demo history is merged in on read)
 
 export const isDemoMode = () => !TABLE;
 
-/** Transactions with demo data rolled forward to the current date. */
+/** A user's transactions: the demo history (for demo/guest users) plus their own, rolled forward to today. */
 export async function listTransactions(userId, { now = new Date() } = {}) {
-  return shiftSeeded(await listStored(userId), now);
+  const stored = await listStored(userId);
+  if (!usesDemoData(userId)) return shiftSeeded(stored, now);
+  const own = new Set(stored.map((t) => t.id));
+  const history = demoHistory().filter((t) => !own.has(t.id)).map((t) => ({ ...t, userId }));
+  return shiftSeeded([...history, ...stored], now);
 }
 
 /** Transactions exactly as stored (DynamoDB keys use the stored date). */
@@ -135,4 +147,27 @@ export async function putMeta(userId, key, value) {
   const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
   await (await client()).send(new PutCommand({ TableName: TABLE, Item: { PK: `USER#${userId}`, SK: `META#${key}`, value, updatedAt: new Date().toISOString() } }));
   return value;
+}
+
+/** Deletes everything a user has stored (their own transactions, budgets, marks, bank links). */
+export async function deleteUserData(userId) {
+  if (!TABLE) {
+    memory.delete(userId);
+    for (const k of [...meta.keys()]) if (k.startsWith(`${userId}:`)) meta.delete(k);
+    return;
+  }
+  const { QueryCommand, BatchWriteCommand } = await import('@aws-sdk/lib-dynamodb');
+  const keys = [];
+  let ExclusiveStartKey;
+  do {
+    const res = await (await client()).send(new QueryCommand({
+      TableName: TABLE, KeyConditionExpression: 'PK = :pk', ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+      ProjectionExpression: 'PK, SK', ExclusiveStartKey,
+    }));
+    keys.push(...(res.Items || []));
+    ExclusiveStartKey = res.LastEvaluatedKey;
+  } while (ExclusiveStartKey);
+  for (let i = 0; i < keys.length; i += 25) {
+    await (await client()).send(new BatchWriteCommand({ RequestItems: { [TABLE]: keys.slice(i, i + 25).map((Key) => ({ DeleteRequest: { Key } })) } }));
+  }
 }

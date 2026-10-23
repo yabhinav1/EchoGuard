@@ -3,7 +3,7 @@
  */
 import express from 'express';
 import cors from 'cors';
-import { routes } from './handlers/api.js';
+import { routes, userIdFromHeader } from './handlers/api.js';
 import { isDemoMode } from './services/db.js';
 
 const app = express();
@@ -13,7 +13,7 @@ app.use(express.json({ limit: '5mb' }));
 for (const [key, fn] of Object.entries(routes)) {
   const [method, path] = key.split(' ');
   app[method.toLowerCase()](path, async (req, res) => {
-    const userId = req.header('x-user-id') || 'demo';
+    const userId = userIdFromHeader(req.header('x-user-id'));
     try {
       const out = await fn({ userId, params: req.params, query: req.query, body: req.body });
       res.status(out.status).json(out.body);
