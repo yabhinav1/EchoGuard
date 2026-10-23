@@ -147,36 +147,68 @@ Resources:
         - 'echoguard-${Suffix}'
         - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
 
+  # ---- HTTP API ----
+  # Plain CloudFormation resources rather than AWS::Serverless::HttpApi: SAM's Auth property can't be
+  # switched on and off with a condition, these can. CORS preflight (OPTIONS) is answered by API Gateway.
   HttpApi:
-    Type: AWS::Serverless::HttpApi
+    Type: AWS::ApiGatewayV2::Api
     Properties:
+      Name: !Sub '${AWS::StackName}-api'
+      ProtocolType: HTTP
       CorsConfiguration:
         AllowOrigins: ['*']
         AllowHeaders: [Content-Type, Authorization, X-User-Id]
         AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
-      Auth: !If
-        - UseAuth
-        - DefaultAuthorizer: CognitoJwt
-          Authorizers:
-            CognitoJwt:
-              IdentitySource: $request.header.Authorization
-              JwtConfiguration:
-                issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
-                audience: [!Ref UserPoolClient]
-        - !Ref AWS::NoValue
+
+  HttpApiAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Condition: UseAuth
+    Properties:
+      ApiId: !Ref HttpApi
+      Name: CognitoJwt
+      AuthorizerType: JWT
+      IdentitySource: [$request.header.Authorization]
+      JwtConfiguration:
+        Issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+        Audience: [!Ref UserPoolClient]
+
+  HttpApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ApiFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  HttpApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: 'ANY /{proxy+}'
+      Target: !Sub 'integrations/${HttpApiIntegration}'
+      AuthorizationType: !If [UseAuth, JWT, NONE]
+      AuthorizerId: !If [UseAuth, !Ref HttpApiAuthorizer, !Ref AWS::NoValue]
+
+  HttpApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  HttpApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
 
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../backend
       Handler: src/handlers/lambda.apiHandler
-      Events:
-        Proxy:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /{proxy+}
-            Method: ANY
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref TransactionsTable }
         - SNSPublishMessagePolicy: { TopicName: !GetAtt AlertsTopic.TopicName }

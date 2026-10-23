@@ -2,6 +2,8 @@
 
 **Your AI guard against forgotten subscriptions, sneaky price hikes and surprise charges.**
 
+**Live demo: https://d3bxsheojwjsv3.cloudfront.net** (no sign-up needed)
+
 EchoGuard reads your transactions, finds every recurring payment, flags anything unusual, tells you exactly what to cancel (and helps you do it), and answers questions by chat, voice, or Alexa.
 
 Built for the Amazon developer hackathon on AWS Lambda, DynamoDB, EventBridge, SNS, Cognito, CloudFront and the Alexa Skills Kit, with optional Amazon Bedrock and Textract.

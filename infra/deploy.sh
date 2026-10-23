@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 # One-shot deploy: backend via SAM, then build + upload the frontend.
-# Prereqs: aws cli, sam cli, credentials configured. Enable Claude model access in the Bedrock console first.
+# Prereqs: aws cli, sam cli, credentials configured (Bedrock model access only if ENABLE_BEDROCK=true).
 set -euo pipefail
 cd "$(dirname "$0")"
 STACK=${STACK:-echoguard}
 REGION=${AWS_REGION:-us-east-1}
 
+# SAM rejects empty "Key=" overrides, so optional settings are only passed when set (blank ones use the template default)
+PARAMS=(
+  EnableAuth="${ENABLE_AUTH:-true}" PlaidEnv="${PLAID_ENV:-sandbox}"
+  EnableBedrock="${ENABLE_BEDROCK:-false}" EnableTextract="${ENABLE_TEXTRACT:-false}"
+  FrontendOrigin="${FRONTEND_ORIGIN:-http://localhost:5173}"
+)
+[ -n "${ALERT_EMAIL:-}" ] && PARAMS+=(AlertEmail="$ALERT_EMAIL")
+[ -n "${PLAID_CLIENT_ID:-}" ] && PARAMS+=(PlaidClientId="$PLAID_CLIENT_ID" PlaidSecret="${PLAID_SECRET:-}")
+[ -n "${ALEXA_SKILL_ID:-}" ] && PARAMS+=(AlexaSkillId="$ALEXA_SKILL_ID")
+
 sam build -t template.yaml
 sam deploy -t template.yaml --stack-name "$STACK" --region "$REGION" --resolve-s3 \
   --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset \
-  --parameter-overrides \
-    AlertEmail="${ALERT_EMAIL:-}" EnableAuth="${ENABLE_AUTH:-true}" \
-    PlaidClientId="${PLAID_CLIENT_ID:-}" PlaidSecret="${PLAID_SECRET:-}" PlaidEnv="${PLAID_ENV:-sandbox}" \
-    EnableBedrock="${ENABLE_BEDROCK:-false}" EnableTextract="${ENABLE_TEXTRACT:-false}" \
-    FrontendOrigin="${FRONTEND_ORIGIN:-http://localhost:5173}" AlexaSkillId="${ALEXA_SKILL_ID:-}"
+  --parameter-overrides "${PARAMS[@]}"
 
 API=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)
 BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
