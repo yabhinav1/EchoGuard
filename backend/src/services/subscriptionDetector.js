@@ -21,6 +21,20 @@ export function normalizeMerchant(name) {
     .trim();
 }
 
+const KEEP_UPPER = new Set(['NYT', 'BART', 'CVS', 'HBO', 'AT&T', 'USA', 'UK']);
+
+/** Human-friendly merchant name for display and speech: "HULU*LLC" -> "Hulu", "APPLE.COM/BILL" -> "Apple". */
+export function displayMerchant(name) {
+  const cleaned = String(name)
+    .replace(/\*.*$/, '')
+    .replace(/\.com(\/bill)?$/i, '')
+    .replace(/\s+(usa|llc|inc)\.?$/i, '')
+    .trim() || String(name);
+  return cleaned.split(/\s+/).map((w) => (
+    w === w.toUpperCase() && /[A-Z]{2,}/.test(w) && !KEEP_UPPER.has(w) ? w[0] + w.slice(1).toLowerCase() : w
+  )).join(' ');
+}
+
 function median(nums) {
   const s = [...nums].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
@@ -78,7 +92,8 @@ export function detectSubscriptions(transactions, { now = new Date() } = {}) {
 
     subs.push({
       id: key.replace(/\s+/g, '-'),
-      merchant: last.merchant,
+      merchant: displayMerchant(last.merchant),
+      rawMerchant: last.merchant,
       category: last.category,
       cadence: cadence.name,
       amount: last.amount,

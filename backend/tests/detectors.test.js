@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { detectSubscriptions, subscriptionSummary, normalizeMerchant } from '../src/services/subscriptionDetector.js';
+import { detectSubscriptions, subscriptionSummary, normalizeMerchant, displayMerchant } from '../src/services/subscriptionDetector.js';
 import { detectAnomalies } from '../src/services/anomalyDetector.js';
 import { suggestSavings } from '../src/services/insights.js';
 
@@ -17,7 +17,7 @@ test('normalizes merchant names', () => {
 test('detects monthly, weekly and yearly subscriptions', () => {
   const subs = detectSubscriptions(txs, { now: NOW });
   const byName = Object.fromEntries(subs.map((s) => [s.merchant, s]));
-  assert.equal(byName['NETFLIX.COM'].cadence, 'monthly');
+  assert.equal(byName['Netflix'].cadence, 'monthly');
   assert.equal(byName['HelloFresh'].cadence, 'weekly');
   assert.equal(byName['Amazon Prime'].cadence, 'yearly');
   assert.ok(!byName['Chipotle'], 'random dining should not be a subscription');
@@ -26,8 +26,8 @@ test('detects monthly, weekly and yearly subscriptions', () => {
 test('flags price hike, trial conversion, and cancelled subscription', () => {
   const subs = detectSubscriptions(txs, { now: NOW });
   const byName = Object.fromEntries(subs.map((s) => [s.merchant, s]));
-  assert.ok(byName['NETFLIX.COM'].priceChange, 'netflix should have a price change');
-  assert.ok(byName['NETFLIX.COM'].priceChange.pct > 10);
+  assert.ok(byName['Netflix'].priceChange, 'netflix should have a price change');
+  assert.ok(byName['Netflix'].priceChange.pct > 10);
   assert.equal(byName['Peloton App'].trialConverted, true);
   assert.equal(byName['NYT Digital'].status, 'inactive');
 });
@@ -65,4 +65,13 @@ test('duplicate charge is caught even with another charge in between', () => {
   const anomalies = detectAnomalies([t('a', 0, 'DoorDash', 20), t('b', 2, 'Starbucks', 5), t('c', 4, 'DoorDash', 20)], { now: NOW });
   const dup = anomalies.find((a) => a.type === 'duplicate_charge');
   assert.ok(dup && dup.transactionId === 'c' && dup.relatedTransactionId === 'a');
+});
+
+test('display names are human-friendly', () => {
+  assert.equal(displayMerchant('NETFLIX.COM'), 'Netflix');
+  assert.equal(displayMerchant('HULU*LLC'), 'Hulu');
+  assert.equal(displayMerchant('APPLE.COM/BILL'), 'Apple');
+  assert.equal(displayMerchant('Spotify USA'), 'Spotify');
+  assert.equal(displayMerchant('NYT Digital'), 'NYT Digital');
+  assert.equal(displayMerchant('Peloton App'), 'Peloton App');
 });

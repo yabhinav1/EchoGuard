@@ -29,3 +29,6 @@ export const api = {
 
 export const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+/** "YYYY-MM-DD" renewal dates are calendar days; pin them to noon UTC so no timezone shifts the day. */
+export const renewalDate = (ymd) => new Date(`${ymd}T12:00:00Z`);
+export const inDays = (n) => (n === 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`);

@@ -14,7 +14,7 @@ const randomString = (n = 64) => b64url(crypto.getRandomValues(new Uint8Array(n)
 const sha256 = async (s) => b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
 
 function load() { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; } }
-function save(v) { try { v ? localStorage.setItem(KEY, JSON.stringify(v)) : localStorage.removeItem(KEY); } catch {} }
+function save(v) { try { if (v) localStorage.setItem(KEY, JSON.stringify(v)); else localStorage.removeItem(KEY); } catch {} }
 
 export function decodeJwt(token) {
   try { return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return null; }

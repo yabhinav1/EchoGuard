@@ -1,7 +1,7 @@
 /**
  * Flags unusual transactions. Returns a list of anomalies with a plain-English reason.
  */
-import { normalizeMerchant } from './subscriptionDetector.js';
+import { normalizeMerchant, displayMerchant } from './subscriptionDetector.js';
 
 const MIN = 60 * 1000;
 
@@ -31,7 +31,7 @@ export function detectAnomalies(transactions, { zThreshold = 2.5, lookbackDays =
     for (let j = i - 1; j >= 0 && bTime - new Date(sorted[j].date).getTime() <= 10 * MIN; j--) {
       const a = sorted[j];
       if (normalizeMerchant(a.merchant) === normalizeMerchant(b.merchant) && a.amount === b.amount) {
-        push(b, 'duplicate_charge', 'high', `Charged twice by ${b.merchant} for $${b.amount.toFixed(2)} within minutes.`, {
+        push(b, 'duplicate_charge', 'high', `Charged twice by ${displayMerchant(b.merchant)} for $${b.amount.toFixed(2)} within minutes.`, {
           relatedTransactionId: a.id,
         });
         break;
@@ -57,7 +57,7 @@ export function detectAnomalies(transactions, { zThreshold = 2.5, lookbackDays =
       if (z >= zThreshold) {
         const multiple = (tx.amount / mean).toFixed(1);
         push(tx, 'category_outlier', z >= 4 ? 'high' : 'medium',
-          `$${tx.amount.toFixed(2)} at ${tx.merchant} is ${multiple}x your typical ${category} purchase ($${mean.toFixed(2)}).`,
+          `$${tx.amount.toFixed(2)} at ${displayMerchant(tx.merchant)} is ${multiple}x your typical ${category} purchase ($${mean.toFixed(2)}).`,
           { zScore: +z.toFixed(2), categoryMean: +mean.toFixed(2) });
       }
     }
@@ -75,7 +75,7 @@ export function detectAnomalies(transactions, { zThreshold = 2.5, lookbackDays =
     if (seen.has(`${tx.id}:category_outlier`)) continue; // already flagged with a stronger reason
     if (tx.amount > overall.mean + 2 * overall.std && tx.amount > 100) {
       push(tx, 'new_merchant_large', 'medium',
-        `First time seeing ${tx.merchant}, and it was a large charge of $${tx.amount.toFixed(2)}.`);
+        `First time seeing ${displayMerchant(tx.merchant)}, and it was a large charge of $${tx.amount.toFixed(2)}.`);
     }
   }
 

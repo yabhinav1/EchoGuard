@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { api, money } from '../api';
+import { Icon } from './Icon';
 
 const SAMPLE_RECEIPT = `Blue Bottle Coffee
 10/23/2026
@@ -29,7 +30,6 @@ export default function Import({ features, onImported, notify }) {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
 
-  useEffect(() => { setParsed(null); }, [tab]);
 
   const pickFile = (e) => {
     const f = e.target.files?.[0];
@@ -90,10 +90,10 @@ export default function Import({ features, onImported, notify }) {
 
   return (
     <div className="card">
-      <h2>Add transactions</h2>
-      <div className="chips" role="tablist">
-        {[['receipt', 'Scan receipt'], ['csv', 'Import CSV'], ['bank', 'Link bank']].map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'primary' : ''} onClick={() => setTab(k)}>{label}</button>
+      <h2><span className="h-icon"><Icon name="receipt" size={15} /></span>Add transactions</h2>
+      <div className="segmented wide" role="tablist" aria-label="Import method">
+        {[['receipt', 'Scan receipt', 'receipt'], ['csv', 'Import CSV', 'file'], ['bank', 'Link bank', 'bank']].map(([k, label, icon]) => (
+          <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setParsed(null); }}><Icon name={icon} size={14} />{label}</button>
         ))}
       </div>
 
