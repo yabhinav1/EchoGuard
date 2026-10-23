@@ -2,17 +2,26 @@ import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Logo } from './components/Logo';
 import { Icon } from './components/Icon';
-import SavingsHero from './components/SavingsHero';
-import StatTiles from './components/StatTiles';
+import Sidebar from './components/Sidebar';
+import { NAV } from './nav';
+import Overview from './components/Overview';
+import SavingsList from './components/SavingsList';
 import { MonthlySpend, CategoryBreakdown } from './components/SpendChart';
 import Subscriptions from './components/Subscriptions';
 import Anomalies from './components/Anomalies';
 import Renewals from './components/Renewals';
 import Chat from './components/Chat';
+import { useChat } from './useChat';
 import Budgets from './components/Budgets';
 import Import from './components/Import';
 import { authEnabled, currentUser, signIn, signOut, completeSignIn } from './auth';
 import { useTheme } from './theme';
+
+const VIEWS = NAV.flatMap((g) => g.items).filter((i) => i.id !== 'assistant');
+const viewFromHash = () => {
+  const id = window.location.hash.replace(/^#\/?/, '');
+  return VIEWS.some((v) => v.id === id) ? id : 'dashboard';
+};
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -22,7 +31,12 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [features, setFeatures] = useState(null);
   const [user, setUser] = useState(null);
+  const [view, setView] = useState(viewFromHash);
+  const [navOpen, setNavOpen] = useState(() => window.innerWidth > 1024);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [theme, toggleTheme] = useTheme();
+  const chat = useChat();
 
   const load = () => api.dashboard().then((d) => { setData(d); setError(null); }).catch((e) => setError(e.message));
   useEffect(() => {
@@ -35,8 +49,27 @@ export default function App() {
     })();
   }, []);
 
-  const notify = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3500); };
+  useEffect(() => {
+    const onHash = () => setView(viewFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setChatOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
+  const navigate = (id) => {
+    if (id === 'assistant') { setChatOpen(true); } else {
+      window.location.hash = `/${id}`;
+      setView(id);
+      window.scrollTo({ top: 0 });
+    }
+    if (window.innerWidth <= 1024) setNavOpen(false);
+  };
+
+  const notify = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3500); };
   const onReminders = async () => {
     setBusy(true);
     try {
@@ -46,14 +79,15 @@ export default function App() {
   };
   const onDigest = async () => {
     setBusy(true);
-    try { setDigest((await api.digest()).text); } catch (e) { notify(`Error: ${e.message}`); } finally { setBusy(false); }
+    try { setDigest((await api.digest()).text); navigate('dashboard'); } catch (e) { notify(`Error: ${e.message}`); } finally { setBusy(false); }
   };
-
-  const themeButton = (
-    <button className="icon-btn" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title="Toggle theme">
-      <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-    </button>
-  );
+  const onSearch = (e) => {
+    e.preventDefault();
+    if (!search.trim()) return;
+    chat.ask(search);
+    setSearch('');
+    setChatOpen(true);
+  };
 
   if (error) {
     return (
@@ -81,76 +115,127 @@ export default function App() {
   }
 
   const live = !!features?.bedrock;
+  const title = VIEWS.find((v) => v.id === view)?.label;
 
   return (
-    <>
+    <div className={`shell ${navOpen ? 'nav-open' : 'nav-closed'}`}>
       <header className="topbar">
-        <div className="wrap topbar-inner">
-          <div className="brand">
-            <Logo size={34} />
-            <div>
-              <div className="brand-name">EchoGuard</div>
-              <div className="brand-sub">{data ? `${data.transactionCount} transactions analyzed` : 'Loading your data...'}</div>
-            </div>
-          </div>
-          <div className="actions">
-            <span className={`status-pill ${live ? 'live' : ''}`} title={live ? 'Answers come from Claude on Amazon Bedrock' : 'Running offline with rule-based answers'}>
-              <span className="dot" />{live ? 'Claude on Bedrock' : 'Demo mode'}
-            </span>
-            {user && <span className="user">{user.email}</span>}
-            <button onClick={onDigest} disabled={busy || !data}><Icon name="mail" />Weekly digest</button>
-            <button className="primary" onClick={onReminders} disabled={busy || !data}><Icon name="bell" />Send reminders</button>
-            {themeButton}
-            {user && <button className="icon-btn" onClick={signOut} aria-label="Sign out" title="Sign out"><Icon name="logout" /></button>}
+        <div className="topbar-brand">
+          <a className="brand" href="#/dashboard" onClick={(e) => { e.preventDefault(); navigate('dashboard'); }}>
+            <Logo size={32} /><span className="brand-name">EchoGuard</span>
+          </a>
+          <button className="square-btn primary-soft" onClick={() => setNavOpen((o) => !o)} aria-label="Toggle navigation" aria-expanded={navOpen}>
+            <Icon name="menu" size={18} />
+          </button>
+        </div>
+        <form className="search" onSubmit={onSearch} role="search">
+          <Icon name="search" size={16} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder='Ask anything, e.g. "what can I cancel?"' aria-label="Ask EchoGuard" />
+          <button type="submit" className="square-btn primary-soft sm" aria-label="Ask"><Icon name="sparkles" size={16} /></button>
+        </form>
+        <div className="topbar-actions">
+          <button className="square-btn warn-soft" onClick={() => navigate('activity')} aria-label={`${data?.anomalies.length ?? 0} alerts`} title="Unusual activity">
+            <Icon name="bell" size={18} />
+            {data?.anomalies.length > 0 && <span className="dot-badge">{data.anomalies.length}</span>}
+          </button>
+          <div className="profile-pill">
+            <span className="avatar-circle" title={user?.email || 'Demo user'}>{(user?.email?.[0] || 'D').toUpperCase()}</span>
+            <button className="pill-btn" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} title="Toggle theme">
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+            </button>
+            {user && <button className="pill-btn" onClick={signOut} aria-label="Sign out" title="Sign out"><Icon name="logout" size={18} /></button>}
           </div>
         </div>
       </header>
 
-      {!data ? (
-        <div className="wrap layout" aria-busy="true">
-          <main className="main">
-            <div className="skeleton" style={{ height: 220 }} />
-            <div className="tiles">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 104 }} />)}</div>
-            <div className="grid two"><div className="skeleton" style={{ height: 280 }} /><div className="skeleton" style={{ height: 280 }} /></div>
-          </main>
-          <aside className="side"><div className="skeleton" style={{ height: 260 }} /><div className="skeleton" style={{ flex: 1, minHeight: 300 }} /></aside>
+      <Sidebar view={view} onNavigate={navigate} alertCount={data?.anomalies.length || 0} live={live} busy={busy || !data}
+        onDigest={onDigest} onReminders={onReminders} />
+      {navOpen && <div className="scrim nav-scrim" onClick={() => setNavOpen(false)} />}
+
+      <main className="content">
+        <div className="page-head">
+          <div>
+            <h1>{title}</h1>
+            <div className="dim">{data ? `${data.transactionCount} transactions analyzed · ${live ? 'live' : 'demo'} data` : 'Loading your data...'}</div>
+          </div>
         </div>
-      ) : (
-        <div className="wrap layout">
-          <main className="main">
+
+        {!data ? (
+          <div className="page" aria-busy="true">
+            <div className="overview">{[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 190 }} />)}</div>
+            <div className="row"><div className="skeleton span-8" style={{ height: 380 }} /><div className="skeleton span-4" style={{ height: 380 }} /></div>
+          </div>
+        ) : (
+          <div className="page">
             {digest && (
               <div className="card digest-card">
-                <h2><span className="h-icon"><Icon name="mail" size={15} /></span>Weekly digest
-                  <button className="icon-btn" onClick={() => setDigest(null)} aria-label="Close digest"><Icon name="x" /></button>
-                </h2>
+                <h2>Weekly digest <button className="icon-btn ghost" onClick={() => setDigest(null)} aria-label="Close digest"><Icon name="x" /></button></h2>
                 <div className="digest">{digest}</div>
               </div>
             )}
-            <SavingsHero tips={data.tips} summary={data.summary} />
-            <StatTiles summary={data.summary} anomalies={data.anomalies} />
-            <div className="grid two">
-              <MonthlySpend series={data.monthlySeries} />
-              <CategoryBreakdown totals={data.categoryTotals} />
-            </div>
-            <Anomalies anomalies={data.anomalies} />
-            <Subscriptions subscriptions={data.subscriptions} />
-            <div className="grid two">
-              <Budgets budgets={data.budgets} onChange={load} />
-              <Import features={features} onImported={load} notify={notify} />
-            </div>
-          </main>
-          <aside className="side">
-            <Renewals subscriptions={data.subscriptions} />
-            <Chat />
-          </aside>
-        </div>
-      )}
 
-      <footer className="wrap footer">
-        Built on AWS Lambda · DynamoDB · Amazon Bedrock · Textract · SNS · EventBridge · Cognito · Alexa
-      </footer>
+            {view === 'dashboard' && <>
+              <Overview summary={data.summary} tips={data.tips} anomalies={data.anomalies} onNavigate={navigate} />
+              <div className="row">
+                <div className="span-8"><MonthlySpend series={data.monthlySeries} /></div>
+                <div className="span-4"><Renewals subscriptions={data.subscriptions} /></div>
+              </div>
+              <div className="row">
+                <div className="span-6"><SavingsList tips={data.tips} /></div>
+                <div className="span-6"><CategoryBreakdown totals={data.categoryTotals} /></div>
+              </div>
+              <Anomalies anomalies={data.anomalies} />
+            </>}
+
+            {view === 'subscriptions' && (
+              <div className="row">
+                <div className="span-8"><Subscriptions subscriptions={data.subscriptions} /></div>
+                <div className="span-4 stack-col"><Renewals subscriptions={data.subscriptions} limit={8} /><SavingsList tips={data.tips} /></div>
+              </div>
+            )}
+
+            {view === 'activity' && <>
+              <Anomalies anomalies={data.anomalies} />
+              <div className="row">
+                <div className="span-6"><CategoryBreakdown totals={data.categoryTotals} /></div>
+                <div className="span-6"><MonthlySpend series={data.monthlySeries} /></div>
+              </div>
+            </>}
+
+            {view === 'budgets' && (
+              <div className="row">
+                <div className="span-6"><Budgets budgets={data.budgets} onChange={load} /></div>
+                <div className="span-6"><CategoryBreakdown totals={data.categoryTotals} /></div>
+              </div>
+            )}
+
+            {view === 'import' && (
+              <div className="row">
+                <div className="span-6"><Import features={features} onImported={load} notify={notify} /></div>
+                <div className="span-6 import-help card">
+                  <h2>Where your data comes from</h2>
+                  <ul className="help-list">
+                    <li><Icon name="receipt" size={18} /><div><b>Receipts</b><span>Photos go through Amazon Textract; Bedrock picks the category.</span></div></li>
+                    <li><Icon name="file" size={18} /><div><b>CSV exports</b><span>Any bank or card export with date, description and amount columns.</span></div></li>
+                    <li><Icon name="bank" size={18} /><div><b>Bank sync</b><span>Plaid Link with incremental sync; access tokens are encrypted with KMS.</span></div></li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        <footer className="footer">Built on AWS Lambda · DynamoDB · Amazon Bedrock · Textract · SNS · EventBridge · Cognito · Alexa</footer>
+      </main>
+
+      <button className="fab" onClick={() => setChatOpen(true)} aria-label="Ask EchoGuard" title="Ask EchoGuard">
+        <Icon name="sparkles" size={22} />
+      </button>
+      {chatOpen && <div className="scrim" onClick={() => setChatOpen(false)} />}
+      <aside className={`drawer ${chatOpen ? 'open' : ''}`} aria-hidden={!chatOpen} aria-label="Assistant">
+        {chatOpen && <Chat chat={chat} onClose={() => setChatOpen(false)} />}
+      </aside>
 
       {toast && <div className="toast" role="status">{toast}</div>}
-    </>
+    </div>
   );
 }

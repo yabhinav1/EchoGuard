@@ -90,7 +90,7 @@ export default function Import({ features, onImported, notify }) {
 
   return (
     <div className="card">
-      <h2><span className="h-icon"><Icon name="receipt" size={15} /></span>Add transactions</h2>
+      <h2>Add transactions</h2>
       <div className="segmented wide" role="tablist" aria-label="Import method">
         {[['receipt', 'Scan receipt', 'receipt'], ['csv', 'Import CSV', 'file'], ['bank', 'Link bank', 'bank']].map(([k, label, icon]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setParsed(null); }}><Icon name={icon} size={14} />{label}</button>

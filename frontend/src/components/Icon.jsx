@@ -23,6 +23,16 @@ const PATHS = {
   logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></>,
   check: <path d="M20 6 9 17l-5-5" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,
+  menu: <path d="M3 6h18M3 12h18M3 18h18" />,
+  search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" /></>,
+  home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" /></>,
+  github: <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />,
+  book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>,
+  'arrow-up-right': <path d="M7 17 17 7M7 7h10v10" />,
+  'arrow-down-right': <path d="M7 7l10 10M17 7v10H7" />,
+  more: <><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></>,
+  chart: <path d="M3 3v18h18M7 16v-4M12 16V8M17 16v-7" />,
+  shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
 };
 
 export function Icon({ name, size = 16, className = '', ...rest }) {

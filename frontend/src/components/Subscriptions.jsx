@@ -20,7 +20,7 @@ export default function Subscriptions({ subscriptions }) {
   return (
     <div className="card">
       <h2>
-        <span className="h-icon"><Icon name="repeat" size={15} /></span>Recurring payments
+        Recurring payments
         <span className="segmented" role="tablist" aria-label="Filter subscriptions">
           {[['active', `Active ${active.length}`], ['all', `All ${subscriptions.length}`]].map(([k, label]) => (
             <button key={k} role="tab" aria-selected={filter === k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>{label}</button>

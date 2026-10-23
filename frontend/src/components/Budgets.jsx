@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { api, money } from '../api';
-import { Icon } from './Icon';
 
 const COLOR = { ok: 'var(--good)', pace: 'var(--warning)', warning: 'var(--serious)', over: 'var(--critical)' };
 const LABEL = { ok: 'on track', pace: 'on pace to exceed', warning: 'near limit', over: 'over budget' };
@@ -19,7 +18,7 @@ export default function Budgets({ budgets, onChange }) {
   return (
     <div className="card">
       <h2>
-        <span className="h-icon"><Icon name="wallet" size={15} /></span>Budgets <span className="count">this month</span>
+        Budgets <span className="count">this month</span>
         {editing
           ? <span className="actions"><button onClick={() => setEditing(false)} disabled={busy}>Cancel</button><button className="primary" onClick={save} disabled={busy}>Save</button></span>
           : <button onClick={start}>Edit</button>}

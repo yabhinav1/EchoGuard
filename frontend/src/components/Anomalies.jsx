@@ -11,7 +11,7 @@ const TYPE = {
 export default function Anomalies({ anomalies }) {
   return (
     <div className="card">
-      <h2><span className="h-icon"><Icon name="alert" size={15} /></span>Unusual activity <span className="count">{anomalies.length} flagged</span></h2>
+      <h2>Unusual activity <span className="count">{anomalies.length} flagged</span></h2>
       {anomalies.length === 0 && <div className="empty"><Icon name="check" /> Nothing unusual. Nice.</div>}
       <div className="alerts">
         {anomalies.map((a) => {
