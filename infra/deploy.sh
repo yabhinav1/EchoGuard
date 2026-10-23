@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# One-shot deploy: backend via SAM, then build + upload the frontend.
+# Prereqs: aws cli, sam cli, credentials configured. Enable Claude model access in the Bedrock console first.
+set -euo pipefail
+cd "$(dirname "$0")"
+STACK=${STACK:-echoguard}
+REGION=${AWS_REGION:-us-east-1}
+
+sam build -t template.yaml
+sam deploy -t template.yaml --stack-name "$STACK" --region "$REGION" --resolve-s3 \
+  --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset \
+  --parameter-overrides \
+    AlertEmail="${ALERT_EMAIL:-}" EnableAuth="${ENABLE_AUTH:-true}" \
+    PlaidClientId="${PLAID_CLIENT_ID:-}" PlaidSecret="${PLAID_SECRET:-}" PlaidEnv="${PLAID_ENV:-sandbox}" \
+    FrontendOrigin="${FRONTEND_ORIGIN:-http://localhost:5173}" AlexaSkillId="${ALEXA_SKILL_ID:-}"
+
+API=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)
+BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
+SITE=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='FrontendUrl'].OutputValue" --output text)
+
+echo "Seeding demo data into DynamoDB..."
+(cd ../backend && TABLE_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='TableName'].OutputValue" --output text) \
+  AWS_REGION=$REGION node scripts/seed-dynamo.js)
+
+out() { aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+COGNITO_DOMAIN=$(out CognitoDomain); COGNITO_CLIENT=$(out CognitoClientId); ALEXA_ARN=$(out AlexaFunctionArn)
+
+echo "Building frontend against $API"
+if [ "${ENABLE_AUTH:-true}" = "true" ]; then
+  (cd ../frontend && VITE_API_URL=$API VITE_COGNITO_DOMAIN=$COGNITO_DOMAIN VITE_COGNITO_CLIENT_ID=$COGNITO_CLIENT VITE_COGNITO_REDIRECT="${FRONTEND_ORIGIN:-$SITE}/" npm run build)
+else
+  (cd ../frontend && VITE_API_URL=$API npm run build)
+fi
+aws s3 sync ../frontend/dist "s3://$BUCKET" --delete --region "$REGION"
+aws cloudfront create-invalidation --distribution-id "$(out FrontendDistributionId)" --paths '/*' --query 'Invalidation.Id' --output text
+
+echo
+echo "API:          $API"
+echo "Frontend:     $SITE"
+echo "Cognito:      $COGNITO_DOMAIN (client $COGNITO_CLIENT)"
+echo "Alexa Lambda: $ALEXA_ARN  (paste into the Alexa skill endpoint, see backend/alexa/README.md)"
+if [ -z "${ALEXA_SKILL_ID:-}" ]; then
+  echo "              Any Alexa skill can invoke it until you re-run with ALEXA_SKILL_ID=amzn1.ask.skill.xxx"
+fi

@@ -1,0 +1,16 @@
+{
+  "name": "echoguard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EchoGuard - AI subscription and spending tracker",
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "seed": "npm run seed -w backend",
+    "test": "npm test -w backend",
+    "build": "npm run build -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
