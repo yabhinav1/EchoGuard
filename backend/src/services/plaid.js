@@ -23,7 +23,7 @@ async function kmsClient() {
 
 async function sealToken(userId, itemId, accessToken) {
   if (!KMS_KEY) {
-    if (process.env.TABLE_NAME) console.warn('[plaid] KMS_KEY_ID is not set; storing the access token unencrypted');
+    if (process.env.TABLE_NAME && ENV !== 'sandbox') console.warn('[plaid] KMS_KEY_ID is not set; storing the access token unencrypted');
     return { accessToken };
   }
   const { EncryptCommand } = await import('@aws-sdk/client-kms');

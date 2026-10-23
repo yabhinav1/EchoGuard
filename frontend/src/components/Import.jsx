@@ -10,6 +10,21 @@ Subtotal        10.00
 Tax              0.95
 TOTAL           10.95`;
 
+/** A small bank export dated relative to today: a new monthly Disney+ charge (which EchoGuard will detect
+ *  as a subscription overlapping your other video services) plus a few everyday purchases. */
+function sampleCsv() {
+  const d = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10);
+  return [
+    'Date,Description,Amount',
+    `${d(61)},DISNEY PLUS,-13.99`,
+    `${d(31)},DISNEY PLUS,-13.99`,
+    `${d(1)},DISNEY PLUS,-13.99`,
+    `${d(1)},UBER *TRIP,-23.10`,
+    `${d(2)},STARBUCKS #1234,-6.45`,
+    `${d(3)},WHOLE FOODS MARKET,-84.20`,
+  ].join('\n');
+}
+
 function loadPlaidScript() {
   return new Promise((resolve, reject) => {
     if (window.Plaid) return resolve(window.Plaid);
@@ -124,7 +139,11 @@ export default function Import({ features, onImported, notify }) {
         <div className="stack">
           <label className="file"><input type="file" accept=".csv,text/csv" onChange={pickCsv} /> Choose a bank or card CSV export</label>
           <textarea rows={6} placeholder={'Date,Description,Amount\n2026-10-20,STARBUCKS,-5.75'} value={csv} onChange={(e) => setCsv(e.target.value)} />
-          <div className="actions"><button className="primary" onClick={importCsv} disabled={busy || !csv.trim()}>Import</button></div>
+          <div className="actions">
+            <button onClick={() => setCsv(sampleCsv())}>Use sample</button>
+            <button className="primary" onClick={importCsv} disabled={busy || !csv.trim()}>Import</button>
+          </div>
+          <div className="dim">The sample adds a monthly Disney+ charge: after importing, it shows up as a new subscription and a video-overlap saving.</div>
         </div>
       )}
 
@@ -135,7 +154,10 @@ export default function Import({ features, onImported, notify }) {
                 <div className="dim">Connect a bank through Plaid. In sandbox, use user_good / pass_good.</div>
                 <div className="actions"><button className="primary" onClick={linkBank} disabled={busy}>Link bank account</button><button onClick={() => api.plaidSync().then((r) => { notify(`Synced ${r.imported} new`); onImported(); }).catch((e) => notify(e.message))} disabled={busy}>Sync now</button></div>
               </>
-            : <div className="dim">Bank sync uses Plaid. Set PLAID_CLIENT_ID and PLAID_SECRET on the API to enable it. Until then, import a CSV export.</div>}
+            : <>
+                <div className="dim">Bank sync isn't switched on in this demo. When it is, you pick your bank, sign in on Plaid's secure page, and EchoGuard imports new transactions automatically.</div>
+                <div className="actions"><button className="primary" onClick={() => setTab('csv')}><Icon name="file" size={14} />Try a CSV import instead</button></div>
+              </>}
         </div>
       )}
     </div>

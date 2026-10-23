@@ -51,6 +51,8 @@ Conditions:
   UseAuth: !Equals [!Ref EnableAuth, 'true']
   HasAlexaSkillId: !Not [!Equals [!Ref AlexaSkillId, '']]
   HasPlaid: !Not [!Equals [!Ref PlaidClientId, '']]
+  # Sandbox tokens only reach Plaid's fake test banks, so the paid KMS key is only created for real banks
+  EncryptPlaidTokens: !And [!Condition HasPlaid, !Not [!Equals [!Ref PlaidEnv, sandbox]]]
 
 Globals:
   Function:
@@ -68,7 +70,7 @@ Globals:
         PLAID_CLIENT_ID: !Ref PlaidClientId
         PLAID_SECRET: !Ref PlaidSecret
         PLAID_ENV: !Ref PlaidEnv
-        KMS_KEY_ID: !If [HasPlaid, !Ref SecretsKey, '']
+        KMS_KEY_ID: !If [EncryptPlaidTokens, !Ref SecretsKey, '']
 
 Resources:
   TransactionsTable:
@@ -97,10 +99,10 @@ Resources:
       # Signed-in users get their own filtered subscriptions; this address receives the demo user's alerts.
       FilterPolicy: { userId: [demo] }
 
-  # Encrypts Plaid access tokens before they are written to DynamoDB (only created when Plaid is configured)
+  # Encrypts Plaid access tokens before they are written to DynamoDB (real banks only, see EncryptPlaidTokens)
   SecretsKey:
     Type: AWS::KMS::Key
-    Condition: HasPlaid
+    Condition: EncryptPlaidTokens
     Properties:
       Description: EchoGuard - encrypts Plaid access tokens
       EnableKeyRotation: true
@@ -224,7 +226,7 @@ Resources:
               Resource: '*'
             - Effect: Allow
               Action: [kms:Encrypt, kms:Decrypt]
-              Resource: !If [HasPlaid, !GetAtt SecretsKey.Arn, !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/unused']
+              Resource: !If [EncryptPlaidTokens, !GetAtt SecretsKey.Arn, !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/unused']
 
   AlexaFunction:
     Type: AWS::Serverless::Function

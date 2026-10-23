@@ -68,7 +68,7 @@ Everything EchoGuard needs fits in the AWS free tier for a hackathon-sized deplo
 |---|---|---|
 | Amazon Bedrock (Claude Haiku 5.5) | Free-form LLM answers and digest | `ENABLE_BEDROCK=true` (and enable model access in the Bedrock console) |
 | Amazon Textract | Receipt photo scanning | `ENABLE_TEXTRACT=true` |
-| Plaid + a KMS key | Live bank sync (sandbox is free; the KMS key is about $1/month) | `PLAID_CLIENT_ID`, `PLAID_SECRET` |
+| Plaid | Bank sync. The sandbox (test banks) is free; real banks also create a KMS key for the tokens (about $1/month) | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` |
 
 Without them, the built-in assistant answers from your data, receipts are parsed from pasted text, and transactions come from CSV import.
 
