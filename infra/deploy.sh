@@ -12,6 +12,7 @@ sam deploy -t template.yaml --stack-name "$STACK" --region "$REGION" --resolve-s
   --parameter-overrides \
     AlertEmail="${ALERT_EMAIL:-}" EnableAuth="${ENABLE_AUTH:-true}" \
     PlaidClientId="${PLAID_CLIENT_ID:-}" PlaidSecret="${PLAID_SECRET:-}" PlaidEnv="${PLAID_ENV:-sandbox}" \
+    EnableBedrock="${ENABLE_BEDROCK:-false}" EnableTextract="${ENABLE_TEXTRACT:-false}" \
     FrontendOrigin="${FRONTEND_ORIGIN:-http://localhost:5173}" AlexaSkillId="${ALEXA_SKILL_ID:-}"
 
 API=$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)

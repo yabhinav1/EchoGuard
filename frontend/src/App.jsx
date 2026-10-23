@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from './api';
 import { Logo } from './components/Logo';
 import { Icon } from './components/Icon';
@@ -14,6 +14,10 @@ import Chat from './components/Chat';
 import { useChat } from './useChat';
 import Budgets from './components/Budgets';
 import Import from './components/Import';
+import Forecast from './components/Forecast';
+import RenewalCalendar from './components/RenewalCalendar';
+import AlexaSimulator from './components/AlexaSimulator';
+import CancelModal from './components/CancelModal';
 import { authEnabled, currentUser, signIn, signOut, completeSignIn } from './auth';
 import { useTheme } from './theme';
 
@@ -35,10 +39,14 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(() => window.innerWidth > 1024);
   const [chatOpen, setChatOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [cancelTarget, setCancelTarget] = useState(null);
   const [theme, toggleTheme] = useTheme();
   const chat = useChat();
 
   const load = () => api.dashboard().then((d) => { setData(d); setError(null); }).catch((e) => setError(e.message));
+  const closeCancel = useCallback(() => setCancelTarget(null), []);
+  // Accepts a subscription object or its id (savings tips only carry ids)
+  const openCancel = (subOrId) => setCancelTarget(typeof subOrId === 'string' ? data?.subscriptions.find((s) => s.id === subOrId) || null : subOrId);
   useEffect(() => {
     (async () => {
       try { if (authEnabled()) await completeSignIn(); } catch (e) { setError(e.message); return; }
@@ -181,21 +189,34 @@ export default function App() {
                 <div className="span-4"><Renewals subscriptions={data.subscriptions} /></div>
               </div>
               <div className="row">
-                <div className="span-6"><SavingsList tips={data.tips} /></div>
-                <div className="span-6"><CategoryBreakdown totals={data.categoryTotals} /></div>
+                <div className="span-6"><Forecast forecast={data.forecast} /></div>
+                <div className="span-6"><SavingsList tips={data.tips} subscriptions={data.subscriptions} onCancel={openCancel} /></div>
               </div>
-              <Anomalies anomalies={data.anomalies} />
+              <Anomalies anomalies={data.anomalies} dismissedCount={data.dismissedCount} onChange={load} notify={notify} />
+              <div className="row">
+                <div className="span-6"><CategoryBreakdown totals={data.categoryTotals} /></div>
+                <div className="span-6"><Budgets budgets={data.budgets} onChange={load} /></div>
+              </div>
             </>}
 
             {view === 'subscriptions' && (
               <div className="row">
-                <div className="span-8"><Subscriptions subscriptions={data.subscriptions} /></div>
-                <div className="span-4 stack-col"><Renewals subscriptions={data.subscriptions} limit={8} /><SavingsList tips={data.tips} /></div>
+                <div className="span-8"><Subscriptions subscriptions={data.subscriptions} onCancel={openCancel} /></div>
+                <div className="span-4 stack-col"><Renewals subscriptions={data.subscriptions} limit={8} /><SavingsList tips={data.tips} subscriptions={data.subscriptions} onCancel={openCancel} /></div>
               </div>
             )}
 
+            {view === 'calendar' && (
+              <div className="row">
+                <div className="span-8"><RenewalCalendar subscriptions={data.subscriptions} onCancel={openCancel} /></div>
+                <div className="span-4 stack-col"><Forecast forecast={data.forecast} /><Renewals subscriptions={data.subscriptions} limit={6} /></div>
+              </div>
+            )}
+
+            {view === 'alexa' && <AlexaSimulator />}
+
             {view === 'activity' && <>
-              <Anomalies anomalies={data.anomalies} />
+              <Anomalies anomalies={data.anomalies} dismissedCount={data.dismissedCount} onChange={load} notify={notify} />
               <div className="row">
                 <div className="span-6"><CategoryBreakdown totals={data.categoryTotals} /></div>
                 <div className="span-6"><MonthlySpend series={data.monthlySeries} /></div>
@@ -235,6 +256,7 @@ export default function App() {
         {chatOpen && <Chat chat={chat} onClose={() => setChatOpen(false)} />}
       </aside>
 
+      {cancelTarget && <CancelModal subscription={cancelTarget} onClose={closeCancel} onChanged={load} notify={notify} />}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );

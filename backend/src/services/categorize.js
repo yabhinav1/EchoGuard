@@ -32,7 +32,7 @@ export async function categorize(merchant, items = []) {
       const answer = (await invoke(
         `Classify a purchase into exactly one of these categories: ${CATEGORIES.join(', ')}. Reply with the category name only.`,
         `Merchant: ${merchant}\nItems: ${items.slice(0, 10).join(', ') || 'unknown'}`,
-        { maxTokens: 10, temperature: 0 },
+        { maxTokens: 1000 },
       )).trim();
       const match = CATEGORIES.find((c) => answer.toLowerCase().includes(c.toLowerCase()));
       if (match) return { category: match, source: 'bedrock' };

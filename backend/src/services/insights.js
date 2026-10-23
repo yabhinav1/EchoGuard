@@ -15,13 +15,18 @@ export function suggestSavings(subscriptions) {
   for (const [group, names] of Object.entries(OVERLAP_GROUPS)) {
     const matches = active.filter((s) => names.some((n) => s.merchant.toLowerCase().includes(n)));
     if (matches.length > 1) {
-      const cheapest = matches.reduce((a, b) => (a.monthlyCost < b.monthlyCost ? a : b));
-      const others = matches.filter((m) => m !== cheapest);
+      // Never suggest dropping something the user marked "keep"; otherwise keep the cheapest
+      const kept = matches.filter((m) => m.userStatus === 'keep');
+      const keeper = kept[0] || matches.reduce((a, b) => (a.monthlyCost < b.monthlyCost ? a : b));
+      const others = matches.filter((m) => m !== keeper && m.userStatus !== 'keep');
+      if (!others.length) continue;
       const saving = others.reduce((sum, m) => sum + m.monthlyCost, 0);
       tips.push({
         type: 'overlap',
         title: `You pay for ${matches.length} ${group.replace('_', ' ')} services`,
-        detail: `${matches.map((m) => m.merchant).join(', ')}. Keeping only ${cheapest.merchant} would save about $${saving.toFixed(2)}/month.`,
+        detail: kept.length
+          ? `${matches.map((m) => m.merchant).join(', ')}. You're keeping ${kept.map((m) => m.merchant).join(' and ')}; dropping ${others.map((m) => m.merchant).join(' and ')} would save about $${saving.toFixed(2)}/month.`
+          : `${matches.map((m) => m.merchant).join(', ')}. Keeping only ${keeper.merchant} would save about $${saving.toFixed(2)}/month.`,
         monthlySaving: +saving.toFixed(2),
         subscriptionIds: matches.map((m) => m.id),
       });
@@ -38,7 +43,7 @@ export function suggestSavings(subscriptions) {
         subscriptionIds: [s.id],
       });
     }
-    if (s.trialConverted) {
+    if (s.trialConverted && s.userStatus !== 'keep') {
       tips.push({
         type: 'trial_converted',
         title: `${s.merchant} trial turned into a paid plan`,

@@ -101,7 +101,7 @@ export default function Import({ features, onImported, notify }) {
         <div className="stack">
           {features?.textract
             ? <label className="file"><input ref={fileRef} type="file" accept="image/*,.pdf" onChange={pickFile} /> {image ? image.name : 'Choose a receipt photo (Amazon Textract)'}</label>
-            : <div className="dim">Photo scanning uses Amazon Textract and is available after deploying. Paste receipt text to try the parser locally.</div>}
+            : <div className="dim">Photo scanning uses Amazon Textract, which is off to keep costs at zero. Paste the receipt text instead.</div>}
           <textarea rows={6} placeholder="...or paste receipt text" value={text} onChange={(e) => setText(e.target.value)} disabled={!!image} />
           <div className="actions">
             <button onClick={() => setText(SAMPLE_RECEIPT)}>Use sample</button>

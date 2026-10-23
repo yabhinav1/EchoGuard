@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { detectSubscriptions, subscriptionSummary, normalizeMerchant, displayMerchant } from '../src/services/subscriptionDetector.js';
 import { detectAnomalies } from '../src/services/anomalyDetector.js';
 import { suggestSavings } from '../src/services/insights.js';
 
-const NOW = new Date('2026-10-23T12:00:00Z');
-const txs = JSON.parse(readFileSync(new URL('../src/data/transactions.json', import.meta.url)));
+import { generateSeed, SEED_ANCHOR } from '../src/services/demoData.js';
+
+const NOW = SEED_ANCHOR;
+const txs = generateSeed();
 
 test('normalizes merchant names', () => {
   assert.equal(normalizeMerchant('NETFLIX*ABC123'), 'netflix');

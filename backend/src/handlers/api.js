@@ -10,7 +10,9 @@ import { getBudgets, setBudgets, budgetStatus, budgetAlerts } from '../services/
 import { scanReceipt } from '../services/receipts.js';
 import { parseCsv } from '../services/importers.js';
 import { plaidEnabled, createLinkToken, exchangePublicToken, syncTransactions } from '../services/plaid.js';
-import { handleAlexaRequest } from '../services/alexa.js';
+import { handleAlexaRequest, simulateUtterance } from '../services/alexa.js';
+import { cancelGuide } from '../services/cancelGuide.js';
+import { setSubscriptionStatus, dismissAnomaly, restoreAnomalies, SUBSCRIPTION_STATUSES } from '../services/prefs.js';
 
 const ok = (body) => ({ status: 200, body });
 const bad = (msg) => ({ status: 400, body: { error: msg } });
@@ -19,8 +21,8 @@ export const routes = {
   'GET /health': async () => ok({
     ok: true, demoMode: isDemoMode(), time: new Date().toISOString(),
     features: {
-      bedrock: process.env.USE_BEDROCK === 'true' || !isDemoMode(),
-      textract: process.env.USE_TEXTRACT === 'true' || !isDemoMode(),
+      bedrock: process.env.USE_BEDROCK === 'true',
+      textract: process.env.USE_TEXTRACT === 'true',
       plaid: plaidEnabled(),
       sns: !!process.env.SNS_TOPIC_ARN,
     },
@@ -36,6 +38,28 @@ export const routes = {
   'GET /anomalies': async ({ userId }) => ok({ anomalies: (await analyzeUser(userId)).anomalies }),
 
   'GET /insights': async ({ userId }) => ok({ tips: (await analyzeUser(userId)).tips }),
+
+  'GET /forecast': async ({ userId }) => ok((await analyzeUser(userId)).forecast),
+
+  // ---- Feedback: keep / cancel subscriptions, dismiss anomalies ----
+  'GET /subscriptions/:id/cancel-guide': async ({ userId, params }) => {
+    const sub = (await analyzeUser(userId)).subscriptions.find((s) => s.id === params.id);
+    return sub ? ok(cancelGuide(sub)) : { status: 404, body: { error: 'Subscription not found' } };
+  },
+  'PUT /subscriptions/:id/status': async ({ userId, params, body }) => {
+    const status = body?.status ?? null;
+    if (status !== null && !SUBSCRIPTION_STATUSES.includes(status)) return bad(`status must be one of ${SUBSCRIPTION_STATUSES.join(', ')} or null`);
+    await setSubscriptionStatus(userId, params.id, status);
+    return ok({ id: params.id, status });
+  },
+  'POST /anomalies/:id/dismiss': async ({ userId, params }) => {
+    await dismissAnomaly(userId, params.id);
+    return ok({ dismissed: params.id });
+  },
+  'POST /anomalies/restore': async ({ userId }) => {
+    await restoreAnomalies(userId);
+    return ok({ restored: true });
+  },
 
   'GET /transactions': async ({ userId, query }) => {
     let txs = await listTransactions(userId);
@@ -120,6 +144,8 @@ export const routes = {
 
   // ---- Alexa (also exposed as its own Lambda) ----
   'POST /alexa': async ({ body }) => ok(await handleAlexaRequest(body || {})),
+  // Try the Alexa skill without a device: utterance -> intent -> the same handler a real Echo reaches
+  'POST /alexa/simulate': async ({ userId, body }) => ok(await simulateUtterance(String(body?.utterance || ''), userId)),
 
   // Manually trigger the reminder job (the scheduled Lambda does the same thing)
   'POST /reminders/run': async ({ userId }) => ok(await runReminders(userId)),

@@ -4,7 +4,7 @@
  */
 import { categorize } from './categorize.js';
 
-const textractEnabled = () => process.env.USE_TEXTRACT === 'true' || !!process.env.TABLE_NAME;
+const textractEnabled = () => process.env.USE_TEXTRACT === 'true';
 
 async function analyzeWithTextract(imageBase64) {
   const { TextractClient, AnalyzeExpenseCommand } = await import('@aws-sdk/client-textract');

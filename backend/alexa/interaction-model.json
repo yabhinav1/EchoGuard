@@ -16,6 +16,9 @@
           "anything unusual", "any unusual charges", "was I charged twice", "any suspicious spending", "check for fraud" ] },
         { "name": "SavingsIntent", "slots": [], "samples": [
           "how can I save money", "what can I cancel", "savings tips", "what should I cancel", "where can I cut costs" ] },
+        { "name": "ForecastIntent", "slots": [], "samples": [
+          "how much will I spend this month", "what will I spend in the next thirty days", "forecast my spending",
+          "how much money is going out", "what is my spending forecast" ] },
         { "name": "BudgetIntent", "slots": [ { "name": "category", "type": "CATEGORY" } ], "samples": [
           "how is my {category} budget", "how much is left in my {category} budget", "budget status", "how are my budgets",
           "am I over budget on {category}" ] },

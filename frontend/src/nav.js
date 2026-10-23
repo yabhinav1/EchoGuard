@@ -3,6 +3,7 @@ export const NAV = [
   {
     group: 'Money', caption: 'Subscriptions and spending', items: [
       { id: 'subscriptions', label: 'Subscriptions', icon: 'repeat' },
+      { id: 'calendar', label: 'Renewal calendar', icon: 'calendar' },
       { id: 'activity', label: 'Unusual activity', icon: 'alert', badge: 'alerts' },
       { id: 'budgets', label: 'Budgets', icon: 'wallet' },
     ],
@@ -10,6 +11,7 @@ export const NAV = [
   {
     group: 'Tools', items: [
       { id: 'import', label: 'Add transactions', icon: 'receipt' },
+      { id: 'alexa', label: 'Alexa skill', icon: 'mic' },
       { id: 'assistant', label: 'Ask EchoGuard', icon: 'sparkles' },
     ],
   },

@@ -7,9 +7,19 @@ Parameters:
     Type: String
     Default: ''
     Description: Email address to subscribe to reminder alerts (optional)
+  EnableBedrock:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Use Claude on Amazon Bedrock for chat and the digest (billed per request). 'false' uses the free built-in assistant.
+  EnableTextract:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Scan receipt photos with Amazon Textract (billed per page). 'false' keeps the free pasted-text parser.
   BedrockModelId:
     Type: String
-    Default: anthropic.claude-3-5-haiku-20241022-v1:0
+    Default: anthropic.claude-haiku-5-5
   EnableAuth:
     Type: String
     Default: 'true'
@@ -40,6 +50,7 @@ Conditions:
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
   UseAuth: !Equals [!Ref EnableAuth, 'true']
   HasAlexaSkillId: !Not [!Equals [!Ref AlexaSkillId, '']]
+  HasPlaid: !Not [!Equals [!Ref PlaidClientId, '']]
 
 Globals:
   Function:
@@ -52,12 +63,12 @@ Globals:
         TABLE_NAME: !Ref TransactionsTable
         SNS_TOPIC_ARN: !Ref AlertsTopic
         BEDROCK_MODEL_ID: !Ref BedrockModelId
-        USE_BEDROCK: 'true'
-        USE_TEXTRACT: 'true'
+        USE_BEDROCK: !Ref EnableBedrock
+        USE_TEXTRACT: !Ref EnableTextract
         PLAID_CLIENT_ID: !Ref PlaidClientId
         PLAID_SECRET: !Ref PlaidSecret
         PLAID_ENV: !Ref PlaidEnv
-        KMS_KEY_ID: !Ref SecretsKey
+        KMS_KEY_ID: !If [HasPlaid, !Ref SecretsKey, '']
 
 Resources:
   TransactionsTable:
@@ -86,9 +97,10 @@ Resources:
       # Signed-in users get their own filtered subscriptions; this address receives the demo user's alerts.
       FilterPolicy: { userId: [demo] }
 
-  # Encrypts Plaid access tokens before they are written to DynamoDB
+  # Encrypts Plaid access tokens before they are written to DynamoDB (only created when Plaid is configured)
   SecretsKey:
     Type: AWS::KMS::Key
+    Condition: HasPlaid
     Properties:
       Description: EchoGuard - encrypts Plaid access tokens
       EnableKeyRotation: true
@@ -180,7 +192,7 @@ Resources:
               Resource: '*'
             - Effect: Allow
               Action: [kms:Encrypt, kms:Decrypt]
-              Resource: !GetAtt SecretsKey.Arn
+              Resource: !If [HasPlaid, !GetAtt SecretsKey.Arn, !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/unused']
 
   AlexaFunction:
     Type: AWS::Serverless::Function

@@ -34,7 +34,7 @@ export default function Sidebar({ view, onNavigate, alertCount, live, busy, onDi
           <button onClick={onDigest} disabled={busy}><Icon name="mail" size={14} />Digest</button>
           <button className="primary" onClick={onReminders} disabled={busy}><Icon name="bell" size={14} />Remind</button>
         </div>
-        <div className={`status-line ${live ? 'live' : ''}`}><span className="dot" />{live ? 'Claude on Amazon Bedrock' : 'Demo mode · rule-based AI'}</div>
+        <div className={`status-line ${live ? 'live' : ''}`}><span className="dot" />{live ? 'Claude on Amazon Bedrock' : 'Built-in assistant · free'}</div>
       </div>
     </nav>
   );

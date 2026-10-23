@@ -1,6 +1,7 @@
 /**
- * Transaction store. Uses DynamoDB when TABLE_NAME is set, otherwise an
- * in-memory store seeded from src/data/transactions.json (demo mode).
+ * Transaction store. Uses DynamoDB when TABLE_NAME is set, otherwise an in-memory store seeded
+ * from src/data/transactions.json, or freshly generated demo data when that file is absent.
+ * Seeded demo transactions are shifted to "today" on every read (see demoData.js).
  *
  * DynamoDB layout (single table):
  *   PK = USER#<userId>   SK = TX#<date>#<id>
@@ -8,6 +9,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generateSeed, shiftSeeded } from './demoData.js';
 
 const TABLE = process.env.TABLE_NAME;
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,8 +27,7 @@ async function client() {
 const memory = new Map(); // userId -> tx[]
 function loadSeed() {
   const file = join(__dirname, '../data/transactions.json');
-  if (!existsSync(file)) return;
-  const txs = JSON.parse(readFileSync(file, 'utf8'));
+  const txs = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : generateSeed();
   for (const tx of txs) {
     if (!memory.has(tx.userId)) memory.set(tx.userId, []);
     memory.get(tx.userId).push(tx);
@@ -36,7 +37,13 @@ if (!TABLE) loadSeed();
 
 export const isDemoMode = () => !TABLE;
 
-export async function listTransactions(userId) {
+/** Transactions with demo data rolled forward to the current date. */
+export async function listTransactions(userId, { now = new Date() } = {}) {
+  return shiftSeeded(await listStored(userId), now);
+}
+
+/** Transactions exactly as stored (DynamoDB keys use the stored date). */
+async function listStored(userId) {
   if (!TABLE) return [...(memory.get(userId) || [])];
   const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
   const items = [];
@@ -85,7 +92,7 @@ export async function deleteTransaction(userId, id) {
     if (i > -1) list.splice(i, 1);
     return i > -1;
   }
-  const all = await listTransactions(userId);
+  const all = await listStored(userId);
   const tx = all.find((t) => t.id === id);
   if (!tx) return false;
   const { DeleteCommand } = await import('@aws-sdk/lib-dynamodb');

@@ -25,6 +25,11 @@ export const api = {
   plaidLinkToken: () => request('/plaid/link-token', { method: 'POST' }),
   plaidExchange: (publicToken) => request('/plaid/exchange', { method: 'POST', body: JSON.stringify({ publicToken }) }),
   plaidSync: () => request('/plaid/sync', { method: 'POST' }),
+  cancelGuide: (id) => request(`/subscriptions/${encodeURIComponent(id)}/cancel-guide`),
+  setSubscriptionStatus: (id, status) => request(`/subscriptions/${encodeURIComponent(id)}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  dismissAnomaly: (id) => request(`/anomalies/${encodeURIComponent(id)}/dismiss`, { method: 'POST' }),
+  restoreAnomalies: () => request('/anomalies/restore', { method: 'POST' }),
+  alexa: (utterance) => request('/alexa/simulate', { method: 'POST', body: JSON.stringify({ utterance }) }),
 };
 
 export const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

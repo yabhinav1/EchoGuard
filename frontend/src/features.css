@@ -1,0 +1,108 @@
+/* Styles for the cancel assistant, forecast, renewal calendar, Alexa simulator and voice controls.
+   Tokens come from index.css. */
+
+/* ---- Shared ---------------------------------------------------------------------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.span-5 { grid-column: span 5; } .span-7 { grid-column: span 7; }
+@media (max-width: 1180px) { .span-5, .span-7 { grid-column: span 12; } }
+button.sm { padding: 5px 10px; font-size: 12px; }
+.ghost-btn { border-color: transparent; background: var(--surface-2); color: var(--ink-2); }
+.link-btn { border: 0; background: none; padding: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--primary-dark); gap: 4px; }
+.link-btn:hover:not(:disabled) { color: var(--primary); text-decoration: underline; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; justify-content: center; text-decoration: none; font-size: 13px; font-weight: 500;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+}
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.btn.primary { background: var(--primary); color: #fff; border-color: transparent; align-self: flex-start; }
+.btn.primary:hover { background: var(--primary-800); color: #fff; }
+.tip-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.row-action { text-align: right; white-space: nowrap; }
+
+/* ---- Cancel modal ------------------------------------------------------------------ */
+.modal-scrim { position: fixed; inset: 0; z-index: 70; background: rgba(15, 23, 42, 0.45); display: grid; place-items: center; padding: 16px; animation: fade 0.15s ease-out; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.modal { width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.modal-head { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--grid); }
+.modal-head > div { flex: 1; min-width: 0; }
+.modal-head h2 { font-size: 17px; font-weight: 600; }
+.modal-body { padding: 18px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.modal-body h3 { font-size: 14px; font-weight: 600; margin-top: 8px; }
+.modal-body textarea { width: 100%; }
+.modal-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid var(--grid); background: var(--surface-2); }
+.save-banner { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--good-soft); color: var(--ink-2); }
+.save-banner .icon { color: var(--good); }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
+.steps code, .kv code { font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+/* ---- Forecast ------------------------------------------------------------------------ */
+.split { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-2); text-align: right; }
+.split b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.key { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; }
+.key.renewals { background: var(--primary); }
+.key.everyday { background: var(--primary-200); }
+.split-bar { height: 8px; border-radius: 4px; background: var(--primary-200); overflow: hidden; margin: -6px 0 12px; }
+.split-bar span { display: block; height: 100%; background: var(--primary); border-right: 2px solid var(--surface); }
+.chart-note { margin-top: 6px; }
+.tip-renewal { font-size: 12px; color: var(--primary-dark); font-weight: 600; }
+
+/* ---- Renewal calendar ------------------------------------------------------------------ */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.card h2.cal-title { font-size: 18px; margin: 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--grid); border-left: 1px solid var(--grid); border-radius: 10px; overflow: hidden; }
+.cal-weekday { padding: 8px; font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); background: var(--surface-2); }
+.cal-cell { min-height: 92px; padding: 6px; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-cell.empty { background: var(--surface-2); }
+.cal-cell.past .cal-chip { opacity: 0.55; }
+.cal-day { font-size: 12px; font-weight: 600; color: var(--ink-2); width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; }
+.cal-cell.today .cal-day { background: var(--primary); color: #fff; }
+.cal-chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0; width: 100%; padding: 3px 6px; border-radius: 6px; border: 0;
+  background: var(--primary-light); color: var(--primary-dark); font-size: 11px; font-weight: 600; text-align: left; line-height: 1.3;
+}
+.cal-chip:hover:not(:disabled) { background: var(--primary); color: #fff; }
+.cal-chip.hike { background: var(--critical-soft); color: var(--critical-ink); }
+.cal-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.cal-chip-amt { font-variant-numeric: tabular-nums; font-weight: 500; opacity: 0.85; }
+.cal-list { display: none; list-style: none; margin: 14px 0 0; padding: 0; }
+.cal-list li { display: grid; grid-template-columns: 56px 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--grid); align-items: center; }
+@media (max-width: 760px) {
+  .cal-cell { min-height: 54px; padding: 3px; }
+  .cal-chip { padding: 0; height: 6px; font-size: 0; border-radius: 3px; }
+  .cal-chip-name, .cal-chip-amt { display: none; }
+  .cal-weekday { padding: 6px 2px; text-align: center; font-size: 10px; }
+  .cal-list { display: block; }
+}
+
+/* ---- Alexa simulator --------------------------------------------------------------------- */
+.alexa-card { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding-top: 32px; }
+.echo { position: relative; width: 150px; height: 150px; display: grid; place-items: center; }
+.echo-body { width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #3b4252, #12151c 70%); display: grid; place-items: center; box-shadow: inset 0 -6px 18px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.25); }
+.echo-body span { color: rgba(255, 255, 255, 0.35); font-size: 13px; letter-spacing: 0.2em; font-weight: 600; }
+.echo-ring { position: absolute; inset: 0; border-radius: 50%; border: 6px solid #2a2f3a; transition: border-color 0.2s, box-shadow 0.2s; }
+.echo.listening .echo-ring { border-color: #00caff; box-shadow: 0 0 24px #00caff88; animation: pulse 1.2s ease-in-out infinite; }
+.echo.thinking .echo-ring { border-color: #00caff; border-top-color: #1d4ed8; border-right-color: #1d4ed8; animation: spin 0.9s linear infinite; }
+.echo.speaking .echo-ring { border-color: #00caff; box-shadow: 0 0 30px #00caffaa; animation: pulse 0.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.alexa-status { color: var(--muted); font-size: 13px; min-height: 20px; }
+.alexa-speech { margin: 0; max-width: 560px; padding: 14px 18px; border-radius: 12px; background: var(--secondary-light); color: var(--ink); font-size: 15px; line-height: 1.55; border-left: 4px solid #00caff; text-align: left; }
+.alexa-error, .voice-error { color: var(--critical-ink); font-size: 12.5px; background: var(--critical-soft); padding: 8px 12px; border-radius: 8px; }
+.voice-error { margin: 10px 20px 0; }
+.alexa-input { display: flex; gap: 8px; width: min(620px, 100%); align-items: center; }
+.alexa-input input { flex: 1; min-width: 0; font: inherit; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); }
+.mic-btn { width: 46px; height: 46px; border-radius: 50%; padding: 0; justify-content: center; border: 0; background: #00caff; color: #04121a; flex-shrink: 0; }
+.mic-btn:hover:not(:disabled) { background: #33d6ff; color: #04121a; }
+.mic-btn.on { background: var(--critical); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+.chips.center { justify-content: center; max-width: 640px; }
+.kv { display: grid; grid-template-columns: 90px 1fr; gap: 8px 12px; margin: 0; font-size: 13.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.json { margin-top: 14px; }
+.json summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary-dark); }
+.json pre { margin: 8px 0 0; padding: 12px; border-radius: 8px; background: var(--surface-2); font-size: 11.5px; max-height: 260px; overflow: auto; text-align: left; }
+
+/* ---- Chat voice controls ---------------------------------------------------------------- */
+.icon-btn.ghost.on { color: var(--primary); background: var(--primary-light); }
+.mic-sm { flex-shrink: 0; }
+.mic-sm.on { background: var(--critical); color: #fff; border-color: transparent; animation: pulse 1.2s ease-in-out infinite; }
